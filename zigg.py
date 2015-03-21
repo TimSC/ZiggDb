@@ -10,6 +10,13 @@ def CheckRectOverlap(rect1, rect2):
 	if rect1[3] < rect2[1]: return 0
 	return 1
 
+def CheckPointInRect(pt, rect):
+	#left,bottom,right,top
+
+	if pt[1] < rect[0] or pt[1] > rect[2]: return 0
+	if pt[0] < rect[1] or pt[0] > rect[3]: return 0
+	return 1
+
 def Interp(a, b, frac):
 	return a * frac + b * (1. - frac)
 
@@ -39,24 +46,52 @@ class ZiggDb(object):
 					tl = slippy.num2deg(x, y, repoZoom)
 					br =  slippy.num2deg(x + 1, y + 1, repoZoom)
 
+					commonNode = uuid.uuid4().bytes
+
 					ziggArea = {}
 					ziggArea["nodes"] = {}
-					ziggArea["nodes"][uuid.uuid4().bytes] = [(Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), None), 
+					ziggArea["nodes"][uuid.uuid4().bytes] = [[[[(Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), None)],None]],
 						{"name": "special place"}]
 					ziggArea["ways"] = {}
-					ziggArea["ways"][uuid.uuid4().bytes] = [[(Interp(tl[0], br[0], .2), Interp(tl[1], br[1], .2), None), 
-						(Interp(tl[0], br[0], .25), Interp(tl[1], br[1], .21), 1), 
-						(Interp(tl[0], br[0], .3), Interp(tl[1], br[1], .23), None)], 
+					ziggArea["ways"][uuid.uuid4().bytes] = [[[[(Interp(tl[0], br[0], .2), Interp(tl[1], br[1], .2), None), 
+						(Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .5), commonNode), 
+						(Interp(tl[0], br[0], .3), Interp(tl[1], br[1], .23), None)], None]],
 						{"name": "path"}]
 					ziggArea["areas"] = {}
-					ziggArea["areas"][uuid.uuid4().bytes] = [[(Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .4), None), 
-						(Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .5), 1), 
+					ziggArea["areas"][uuid.uuid4().bytes] = [[[[(Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .4), None), 
+						(Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .5), commonNode), 
 						(Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .5), None), 
-						(Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .4), None)], 
+						(Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .4), None)], []]],
 						{"name": "test area"}]
 
 					cPickle.dump(ziggArea, open(tilePath, "wt"))
 
+	def Trim(self, objsDict, bbox):
+		out = {}
+		for objId in objsDict:
+			objData = objsDict[objId]
+			shapes = objData[0]
+			tags = objData[1]
+			found = False
+			for shape in shapes:
+				outer, inners = shape
+				
+				for pt in outer:
+					if CheckPointInRect(pt, bbox):
+						found = True
+						break
+				if not found and inners is not None:
+					for inner in inners:
+						for pt in inners:
+							if CheckPointInRect(pt, bbox):
+								found = True
+								break
+						if found:
+							break
+							
+			if found:
+				out[objId] = objData
+		return out
 
 	def GetArea(self, bbox):
 		#Find relevant repos
@@ -72,7 +107,7 @@ class ZiggDb(object):
 				relevantRepos.append(repoName)
 	
 		#Get tiles from relevant repos
-		merged = {"nodes": {}, "ways": {}, "areas": {}}
+		merged = {"nodes": {}, "ways": {}, "areas": {}, "active": bbox[:]}
 		for repoName in relevantRepos:
 			repoData = config.repos[repoName]
 			repoZoom = repoData[1]
@@ -94,8 +129,10 @@ class ZiggDb(object):
 					merged["areas"].update(tileData["areas"])
 
 		#Trim objects that are not in the requested bbox at all
-		#TODO
-						
+		merged["nodes"] = self.Trim(merged["nodes"], bbox)
+		merged["ways"] = self.Trim(merged["ways"], bbox)
+		merged["areas"] = self.Trim(merged["areas"], bbox)
+		
 		return merged
 
 	def SetArea(self, areaObj, userInfo):
@@ -107,4 +144,5 @@ class ZiggDb(object):
 		#Update working copy
 		
 		#Commit with userInfo details
+		pass
 

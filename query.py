@@ -8,6 +8,7 @@
 #Ways are stored distinct from areas
 #Map is invariant outside of active edit zone (Edits on incomplete data are a pain in the neck!)
 #Map data is held in multiple non-overlapping Git repositories
+#An object is in a tile iff it has a node within its bounds
 
 import bz2, zigg, cPickle
 
@@ -17,7 +18,7 @@ if __name__ == "__main__":
 	ziggDb.GenerateTestData()
 
 	#area = ziggDb.GetArea([-0.2883911, 51.1517861, -0.2636719, 51.1672889])
-	area = ziggDb.GetArea([-0.2883911, 51.1517861, -0.2536719, 51.1672889])
+	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 
 	print area
 	
