@@ -66,7 +66,7 @@ class ZiggDb(object):
 
 					cPickle.dump(ziggArea, open(tilePath, "wt"))
 
-	def Trim(self, objsDict, bbox):
+	def _Trim(self, objsDict, bbox, invert = False):
 		out = {}
 		for objId in objsDict:
 			objData = objsDict[objId]
@@ -89,11 +89,11 @@ class ZiggDb(object):
 						if found:
 							break
 							
-			if found:
+			if found != invert:
 				out[objId] = objData
 		return out
 
-	def GetArea(self, bbox):
+	def _FindRelevantRepos(self, bbox):
 		#Find relevant repos
 		relevantRepos = []
 		for repoName in config.repos:
@@ -105,7 +105,9 @@ class ZiggDb(object):
 			within = CheckRectOverlap([tl[1], br[0], br[1], tl[0]], bbox)
 			if within:
 				relevantRepos.append(repoName)
-	
+		return relevantRepos
+
+	def _GetTilesFromRepos(self, relevantRepos, bbox):
 		#Get tiles from relevant repos
 		merged = {"nodes": {}, "ways": {}, "areas": {}, "active": bbox[:]}
 		for repoName in relevantRepos:
@@ -128,21 +130,39 @@ class ZiggDb(object):
 					merged["ways"].update(tileData["ways"])
 					merged["areas"].update(tileData["areas"])
 
+		return merged
+		
+	def GetArea(self, bbox):
+		relevantRepos = self._FindRelevantRepos(bbox)
+		merged = self._GetTilesFromRepos(relevantRepos, bbox)
+
 		#Trim objects that are not in the requested bbox at all
-		merged["nodes"] = self.Trim(merged["nodes"], bbox)
-		merged["ways"] = self.Trim(merged["ways"], bbox)
-		merged["areas"] = self.Trim(merged["areas"], bbox)
+		merged["nodes"] = self._Trim(merged["nodes"], bbox)
+		merged["ways"] = self._Trim(merged["ways"], bbox)
+		merged["areas"] = self._Trim(merged["areas"], bbox)
 		
 		return merged
 
 	def SetArea(self, areaObj, userInfo):
 		#Validate input
-		#All objects that are outside allowed area must exist in the input
 
-		#Check no modifications/deletions/additions are made outside specified bbox
+		#Get active area
+		bbox = areaObj["active"]
+		relevantRepos = self._FindRelevantRepos(bbox)
+		merged = self._GetTilesFromRepos(relevantRepos, bbox)
+
+		#All objects that are outside active area must exist in the input
+		outsideObjs={}
+		#outsideObjs["nodes"] = self._PartiallyInside(merged["nodes"], bbox)
+		#outsideObjs["ways"] = self._PartiallyInside(merged["ways"], bbox)
+		#outsideObjs["areas"] = self._PartiallyInside(merged["areas"], bbox)
+		#print "outsideObjs", outsideObjs
+
+		#Check no shape modifications/deletions/additions are made outside active bbox
+		#Shape changes are silently discarded if possible (otherwise we might be comparing floats)
 
 		#Update working copy
 		
 		#Commit with userInfo details
-		pass
+
 
