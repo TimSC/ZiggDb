@@ -7,21 +7,21 @@
 #Multi-polygons stored in native format (not in a relation)
 #Ways are stored distinct from areas
 #Map is invariant outside of active edit zone (Edits on incomplete data are a pain in the neck!)
+#Map data is held in multiple non-overlapping Git repositories
 
 import bz2, zigg, cPickle
 
 if __name__ == "__main__":
 	ziggDb = zigg.ZiggDb()
 
-	area = ziggDb.GenerateTestArea()
-	cPickle.dump(area, open("area.dat", "wt"))
+	ziggDb.GenerateTestData()
 
-	area = ziggDb.GetArea([])
+	#area = ziggDb.GetArea([-0.2883911, 51.1517861, -0.2636719, 51.1672889])
+	area = ziggDb.GetArea([-0.2883911, 51.1517861, -0.2536719, 51.1672889])
 	
 	nd = area.nodes[0]
 	nd[0] = (51.9,-1.5, None)
 
 	userInfo = {}
 	ziggDb.SetArea(area, userInfo)
-
 
