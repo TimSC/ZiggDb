@@ -18,9 +18,9 @@ if __name__ == "__main__":
 
 	#area = ziggDb.GetArea([-0.2883911, 51.1517861, -0.2636719, 51.1672889])
 	area = ziggDb.GetArea([-0.2883911, 51.1517861, -0.2536719, 51.1672889])
+
+	print area
 	
-	nd = area.nodes[0]
-	nd[0] = (51.9,-1.5, None)
 
 	userInfo = {}
 	ziggDb.SetArea(area, userInfo)

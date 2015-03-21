@@ -10,14 +10,6 @@ def CheckRectOverlap(rect1, rect2):
 	if rect1[3] < rect2[1]: return 0
 	return 1
 
-class ZiggArea(object):
-	def __init__(self, bbox):
-		self.bbox = bbox
-		self.basedOnVersion = 1
-		self.nodes = []
-		self.ways = []
-		self.areas = []
-
 def Interp(a, b, frac):
 	return a * frac + b * (1. - frac)
 
@@ -49,15 +41,15 @@ class ZiggDb(object):
 
 					ziggArea = {}
 					ziggArea["nodes"] = {}
-					ziggArea["nodes"][uuid.uuid4().hex] = [(Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), None), 
+					ziggArea["nodes"][uuid.uuid4().bytes] = [(Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), None), 
 						{"name": "special place"}]
 					ziggArea["ways"] = {}
-					ziggArea["ways"][uuid.uuid4().hex] = [[(Interp(tl[0], br[0], .2), Interp(tl[1], br[1], .2), None), 
+					ziggArea["ways"][uuid.uuid4().bytes] = [[(Interp(tl[0], br[0], .2), Interp(tl[1], br[1], .2), None), 
 						(Interp(tl[0], br[0], .25), Interp(tl[1], br[1], .21), 1), 
 						(Interp(tl[0], br[0], .3), Interp(tl[1], br[1], .23), None)], 
 						{"name": "path"}]
 					ziggArea["areas"] = {}
-					ziggArea["areas"][uuid.uuid4().hex] = [[(Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .4), None), 
+					ziggArea["areas"][uuid.uuid4().bytes] = [[(Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .4), None), 
 						(Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .5), 1), 
 						(Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .5), None), 
 						(Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .4), None)], 
@@ -80,20 +72,31 @@ class ZiggDb(object):
 				relevantRepos.append(repoName)
 	
 		#Get tiles from relevant repos
+		merged = {"nodes": {}, "ways": {}, "areas": {}}
 		for repoName in relevantRepos:
 			repoData = config.repos[repoName]
 			repoZoom = repoData[1]
+			repoPath = repoData[4]
 			for x in range(repoData[2][0], repoData[3][0]):
 				for y in range(repoData[2][1], repoData[3][1]):
 					tl = slippy.num2deg(x, y, repoZoom)
 					br =  slippy.num2deg(x + 1, y + 1, repoZoom)
 					within = CheckRectOverlap([tl[1], br[0], br[1], tl[0]], bbox)
-					#if within:
-					#	print x, y
+					if not within: continue
 
+					tilePath = os.path.join(repoPath, str(x), str(y)+".dat")
+					if not os.path.exists(tilePath): continue
 
-		ziggArea = cPickle.load(open("area.dat", "rt"))
-		return ziggArea
+					tileData = cPickle.load(open(tilePath, "rt"))
+
+					merged["nodes"].update(tileData["nodes"])
+					merged["ways"].update(tileData["ways"])
+					merged["areas"].update(tileData["areas"])
+
+		#Trim objects that are not in the requested bbox at all
+		#TODO
+						
+		return merged
 
 	def SetArea(self, areaObj, userInfo):
 		#Validate input
@@ -102,7 +105,6 @@ class ZiggDb(object):
 		#Check no modifications/deletions/additions are made outside specified bbox
 
 		#Update working copy
-		cPickle.dump(areaObj, open("area.dat", "wt"))
 		
 		#Commit with userInfo details
 
