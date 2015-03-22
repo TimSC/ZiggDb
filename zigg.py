@@ -50,18 +50,18 @@ class ZiggDb(object):
 
 					ziggArea = {}
 					ziggArea["nodes"] = {}
-					ziggArea["nodes"][uuid.uuid4().bytes] = [[[[(Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), None)],None]],
+					ziggArea["nodes"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), None]],None]],
 						{"name": "special place"}]
 					ziggArea["ways"] = {}
-					ziggArea["ways"][uuid.uuid4().bytes] = [[[[(Interp(tl[0], br[0], .2), Interp(tl[1], br[1], .2), None), 
-						(Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .5), commonNode), 
-						(Interp(tl[0], br[0], .3), Interp(tl[1], br[1], .23), None)], None]],
+					ziggArea["ways"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .2), Interp(tl[1], br[1], .2), None], 
+						[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .5), commonNode], 
+						[Interp(tl[0], br[0], .3), Interp(tl[1], br[1], .23), None]], None]],
 						{"name": "path"}]
 					ziggArea["areas"] = {}
-					ziggArea["areas"][uuid.uuid4().bytes] = [[[[(Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .4), None), 
-						(Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .5), commonNode), 
-						(Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .5), None), 
-						(Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .4), None)], []]],
+					ziggArea["areas"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .4), None], 
+						[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .5), commonNode], 
+						[Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .5), None], 
+						[Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .4), None]], []]],
 						{"name": "test area"}]
 
 					cPickle.dump(ziggArea, open(tilePath, "wt"))
@@ -131,6 +131,30 @@ class ZiggDb(object):
 					merged["areas"].update(tileData["areas"])
 
 		return merged
+
+	def AddUuidsIfMissing(self, objId, objData):
+
+		shapes = objData[0]
+		for i, shape in enumerate(shapes):
+			outer, inners = shape
+			count = 0
+			shapeUuid = uuid.uuid3(uuid.UUID(bytes=objId), str(i))
+
+			for j, node in enumerate(outer):
+				nodeUuid = node[2]
+				if nodeUuid is None:
+					node[2] = uuid.uuid3(shapeUuid, str(j)).bytes
+
+			count += 1
+
+			if inners is None: continue
+			for inner in inners:
+				for j, node in enumerate(outer):
+					nodeUuid = node[2]
+					if nodeUuid is None:
+						node[2] = uuid.uuid3(shapeUuid, str(j)).bytes
+
+				count += 1
 		
 	def GetArea(self, bbox):
 		relevantRepos = self._FindRelevantRepos(bbox)
@@ -140,7 +164,12 @@ class ZiggDb(object):
 		merged["nodes"] = self._Trim(merged["nodes"], bbox)
 		merged["ways"] = self._Trim(merged["ways"], bbox)
 		merged["areas"] = self._Trim(merged["areas"], bbox)
-		
+
+		#Generate uuids for unnumbered nodes
+		for objId in merged["ways"]:
+			objData = merged["ways"][objId]
+			self.AddUuidsIfMissing(objId, objData)
+
 		return merged
 
 	def SetArea(self, areaObj, userInfo):
