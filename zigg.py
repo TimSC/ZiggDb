@@ -166,7 +166,7 @@ class ZiggDb(object):
 
 					ziggArea = {}
 					ziggArea["nodes"] = {}
-					ziggArea["nodes"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), uuid.uuid4().bytes]],None]],
+					ziggArea["nodes"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), None]],None]],
 						{"name": "special place"}]
 					ziggArea["ways"] = {}
 					ziggArea["ways"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .2), Interp(tl[1], br[1], .2), uuid.uuid4().bytes], 
@@ -348,7 +348,7 @@ class ZiggDb(object):
 		#=Update working copy=
 		#If we have reached here, we are ready to update the working copy
 
-		print "Updating working copy"
+		#print "Updating working copy"
 		relevantRepos = self._FindRelevantRepos(bbox)
 		self._SetTilesInRepos(relevantRepos, area)
 		
