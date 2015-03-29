@@ -292,7 +292,7 @@ class ZiggDb(object):
 				continue
 			ndId = int(ndId)
 			if ndId >= 0:
-				raise Exception("New objects must have negitive ids")	
+				raise ValueError("New objects must have negitive ids")	
 			newId = uuid.uuid4().bytes
 			dataToAdd[newId] = objDict[ndId]
 			keysToRemove.append(ndId)
@@ -316,20 +316,20 @@ class ZiggDb(object):
 		for wayId in partlyOutsideWays:
 			#wayData = partlyOutsideWays[wayId]
 			if wayId not in area["ways"]:
-				raise Exception("Way in input missing which should still exist")
+				raise ValueError("Way in input missing which should still exist")
 		
 		partlyOutsideAreas = FindPartlyOutside(currentArea["areas"], bbox)
 
 		for areaId in partlyOutsideAreas:
 			#areaData = partlyOutsideWays[areaId]
 			if wayId not in area["ways"]:
-				raise Exception("Area in input missing which should still exist")
+				raise ValueError("Area in input missing which should still exist")
 		
 		#==Check no shape modifications/deletions/additions are made outside active bbox==
 		#All nodes should be witin active area, be existing or not
 		partlyOutsideNodes = FindPartlyOutside(area["nodes"], bbox)
 		if len(partlyOutsideNodes) > 0:
-			raise Exception("Nodes cannot be added outside active area")	
+			raise ValueError("Nodes cannot be added outside active area")	
 
 
 		#Shape changes are silently discarded if possible (otherwise we might be comparing floats)

@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
 	#Add point within active area (allowed)
 	userInfo = {}
-	newNode = [[[[[51.12972577997312, -0.2724609375, None]], None]], {'name': 'another place'}]
+	newNode = [[[[[51.129, -0.272, None]], None]], {'name': 'another place'}]
 	area["nodes"][-1] = newNode
 	idChanges = ziggDb.SetArea(area, userInfo)
 	nodeId = idChanges["nodes"].values()[0]
@@ -47,6 +47,16 @@ if __name__ == "__main__":
 	#Delete point within active area (allowed)
 
 	#Add point outside active area (not allowed)
+	userInfo = {}
+	newNode = [[[[[51.11, -0.272, None]], None]], {'name': 'another place'}]
+	area["nodes"][-1] = newNode
+	ex = False
+	try:
+		idChanges = ziggDb.SetArea(area, userInfo)
+	except ValueError as err:
+		ex = True
+	if not ex:
+		print "Unexpected lack of expection when adding node outside active area"
 
 	#Move point in, from or into outside active area (not allowed)
 	
