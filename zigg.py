@@ -20,6 +20,122 @@ def CheckPointInRect(pt, rect):
 def Interp(a, b, frac):
 	return a * frac + b * (1. - frac)
 
+def FindPartlyOutside(objsDict, bbox):
+	out = {}
+	for objId in objsDict:
+		objData = objsDict[objId]
+		shapes = objData[0]
+		tags = objData[1]
+		found = False
+		for shape in shapes:
+			outer, inners = shape
+		
+			for pt in outer:
+				if not CheckPointInRect(pt, bbox):
+					found = True
+					break
+			if not found and inners is not None:
+				for inner in inners:
+					for pt in inners:
+						if not CheckPointInRect(pt, bbox):
+							found = True
+							break
+					if found:
+						break
+					
+		if found != False:
+			out[objId] = objData
+	return out
+
+def FindEntirelyInside(objsDict, bbox):
+	out = {}
+	for objId in objsDict:
+		objData = objsDict[objId]
+		shapes = objData[0]
+		tags = objData[1]
+		found = False
+		for shape in shapes:
+			outer, inners = shape
+		
+			for pt in outer:
+				if not CheckPointInRect(pt, bbox):
+					found = True
+					break
+			if not found and inners is not None:
+				for inner in inners:
+					for pt in inners:
+						if not CheckPointInRect(pt, bbox):
+							found = True
+							break
+					if found:
+						break
+					
+		if found != True:
+			out[objId] = objData
+	return out
+
+def Trim(objsDict, bbox, invert = False):
+	out = {}
+	for objId in objsDict:
+		objData = objsDict[objId]
+		shapes = objData[0]
+		tags = objData[1]
+		found = False
+		for shape in shapes:
+			outer, inners = shape
+			
+			for pt in outer:
+				if CheckPointInRect(pt, bbox):
+					found = True
+					break
+			if not found and inners is not None:
+				for inner in inners:
+					for pt in inners:
+						if CheckPointInRect(pt, bbox):
+							found = True
+							break
+					if found:
+						break
+						
+		if found != invert:
+			out[objId] = objData
+	return out
+
+def CompareAreaObjs(area1Objs, area2Objs, ty):
+	diff = []
+	for objId in area1Objs:
+		if objId not in area2Objs:
+			diff.append("{0} missing from area2".format(ty))
+
+	for objId in area2Objs:
+		if objId not in area1Objs:
+			diff.append("{0} missing from area1".format(ty))
+	
+	for objId in area1Objs:
+		if objId not in area2Objs: continue
+		obj1 = area1Objs[objId]
+		obj2 = area2Objs[objId]
+		shapes1, tags1 = obj1
+		shapes2, tags2 = obj2
+		if tags1 != tags2:
+			diff.append("{0} tag differences".format(ty))
+		if shapes1 != shapes2:
+			diff.append("{0} shape/location differences".format(ty))
+		#print tags1, tags2
+
+	return diff
+
+def CompareAreas(area1, area2):
+	diffs = []
+	diffs.extend(CompareAreaObjs(area1["nodes"], area1["nodes"], "node"))
+	diffs.extend(CompareAreaObjs(area1["ways"], area1["ways"], "way"))
+	diffs.extend(CompareAreaObjs(area1["areas"], area1["areas"], "area"))
+	return diffs
+
+
+
+# ****************** Main class **********************
+
 class ZiggDb(object):
 	
 	def __init__(self):
@@ -41,7 +157,7 @@ class ZiggDb(object):
 				for y in range(repoData[2][1], repoData[3][1]):
 					
 					tilePath = os.path.join(repoPath, str(x), str(y)+".dat")
-					if os.path.exists(tilePath): continue
+					#if os.path.exists(tilePath): continue
 
 					tl = slippy.num2deg(x, y, repoZoom)
 					br =  slippy.num2deg(x + 1, y + 1, repoZoom)
@@ -50,48 +166,23 @@ class ZiggDb(object):
 
 					ziggArea = {}
 					ziggArea["nodes"] = {}
-					ziggArea["nodes"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), None]],None]],
+					ziggArea["nodes"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), uuid.uuid4().bytes]],None]],
 						{"name": "special place"}]
 					ziggArea["ways"] = {}
-					ziggArea["ways"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .2), Interp(tl[1], br[1], .2), None], 
+					ziggArea["ways"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .2), Interp(tl[1], br[1], .2), uuid.uuid4().bytes], 
 						[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .5), commonNode], 
-						[Interp(tl[0], br[0], .3), Interp(tl[1], br[1], .23), None]], None]],
+						[Interp(tl[0], br[0], .3), Interp(tl[1], br[1], .23), uuid.uuid4().bytes]], None]],
 						{"name": "path"}]
 					ziggArea["areas"] = {}
-					ziggArea["areas"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .4), None], 
+					ziggArea["areas"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .4), uuid.uuid4().bytes], 
 						[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .5), commonNode], 
-						[Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .5), None], 
-						[Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .4), None]], []]],
+						[Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .5), uuid.uuid4().bytes], 
+						[Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .4), uuid.uuid4().bytes]], []]],
 						{"name": "test area"}]
 
 					cPickle.dump(ziggArea, open(tilePath, "wt"))
 
-	def _Trim(self, objsDict, bbox, invert = False):
-		out = {}
-		for objId in objsDict:
-			objData = objsDict[objId]
-			shapes = objData[0]
-			tags = objData[1]
-			found = False
-			for shape in shapes:
-				outer, inners = shape
-				
-				for pt in outer:
-					if CheckPointInRect(pt, bbox):
-						found = True
-						break
-				if not found and inners is not None:
-					for inner in inners:
-						for pt in inners:
-							if CheckPointInRect(pt, bbox):
-								found = True
-								break
-						if found:
-							break
-							
-			if found != invert:
-				out[objId] = objData
-		return out
+
 
 	def _FindRelevantRepos(self, bbox):
 		#Find relevant repos
@@ -132,95 +223,139 @@ class ZiggDb(object):
 
 		return merged
 
-	def AddUuidsIfMissing(self, objId, objData):
+	def _SetTilesInRepos(self, relevantRepos, area):
+		#Update tiles in relevant repos
+		bbox = area["active"]
+		for repoName in relevantRepos:
+			repoData = config.repos[repoName]
+			repoZoom = repoData[1]
+			repoPath = repoData[4]
+			for x in range(repoData[2][0], repoData[3][0]):
+				for y in range(repoData[2][1], repoData[3][1]):
+					tl = slippy.num2deg(x, y, repoZoom)
+					br =  slippy.num2deg(x + 1, y + 1, repoZoom)
+					within = CheckRectOverlap([tl[1], br[0], br[1], tl[0]], bbox)
+					if not within: continue
 
-		shapes = objData[0]
-		for i, shape in enumerate(shapes):
-			outer, inners = shape
-			count = 0
-			shapeUuid = uuid.uuid3(uuid.UUID(bytes=objId), str(i))
+					tilePath = os.path.join(repoPath, str(x), str(y)+".dat")
+					if not os.path.exists(tilePath): continue
 
-			for j, node in enumerate(outer):
-				nodeUuid = node[2]
-				if nodeUuid is None:
-					node[2] = uuid.uuid3(shapeUuid, str(j)).bytes
+					tileData = cPickle.load(open(tilePath, "rt"))
 
-			count += 1
+					#Remove existing objects that are entirely inside active area
+					tileData["nodes"] = FindPartlyOutside(tileData["nodes"], bbox)
+					tileData["ways"] = FindPartlyOutside(tileData["ways"], bbox)
+					tileData["areas"] = FindPartlyOutside(tileData["areas"], bbox)
 
-			if inners is None: continue
-			for inner in inners:
-				for j, node in enumerate(outer):
-					nodeUuid = node[2]
-					if nodeUuid is None:
-						node[2] = uuid.uuid3(shapeUuid, str(j)).bytes
+					#Add new objects that are entirely inside active area
+					nodesInside = FindEntirelyInside(area["nodes"], bbox)
+					waysInside = FindEntirelyInside(area["ways"], bbox)
+					areasInside = FindEntirelyInside(area["areas"], bbox)
 
-				count += 1
-		
+					tileData["nodes"].update(nodesInside)
+					tileData["ways"].update(waysInside)
+					tileData["areas"].update(areasInside)
+				
+					#Update objects that are partially outside
+					for objId in area["nodes"]:
+						if objId in nodesInside: continue
+						tileData["nodes"][objId] = area["nodes"][objId]
+
+					for objId in area["ways"]:
+						if objId in waysInside: continue
+						tileData["ways"][objId] = area["ways"][objId]
+
+					for objId in area["areas"]:
+						if objId in areasInside: continue
+						tileData["areas"][objId] = area["areas"][objId]
+
+					#Save result
+					cPickle.dump(tileData, open(tilePath, "wt"))
+
 	def GetArea(self, bbox):
 		relevantRepos = self._FindRelevantRepos(bbox)
 		merged = self._GetTilesFromRepos(relevantRepos, bbox)
 
 		#Trim objects that are not in the requested bbox at all
-		merged["nodes"] = self._Trim(merged["nodes"], bbox)
-		merged["ways"] = self._Trim(merged["ways"], bbox)
-		merged["areas"] = self._Trim(merged["areas"], bbox)
-
-		#Generate uuids for unnumbered nodes
-		for objId in merged["ways"]:
-			objData = merged["ways"][objId]
-			self.AddUuidsIfMissing(objId, objData)
+		merged["nodes"] = Trim(merged["nodes"], bbox)
+		merged["ways"] = Trim(merged["ways"], bbox)
+		merged["areas"] = Trim(merged["areas"], bbox)
 
 		return merged
 
-	def _FindPartlyOutside(self, objsDict, bbox):
-		out = {}
-		for objId in objsDict:
-			objData = objsDict[objId]
-			shapes = objData[0]
-			tags = objData[1]
-			found = False
-			for shape in shapes:
-				outer, inners = shape
-				
-				for pt in outer:
-					if not CheckPointInRect(pt, bbox):
-						found = True
-						break
-				if not found and inners is not None:
-					for inner in inners:
-						for pt in inners:
-							if not CheckPointInRect(pt, bbox):
-								found = True
-								break
-						if found:
-							break
-							
-			if found != False:
-				out[objId] = objData
-		return out
+	def _NumberNewObjects(self, objDict):
+		changes = {}
+		keysToRemove = []
+		dataToAdd = {}
+		for ndId in objDict:
+			if not isinstance(ndId, int):
+				continue
+			ndId = int(ndId)
+			if ndId >= 0:
+				raise Exception("New objects must have negitive ids")	
+			newId = uuid.uuid4().bytes
+			dataToAdd[newId] = objDict[ndId]
+			keysToRemove.append(ndId)
+			changes[ndId] = newId
+		objDict.update(dataToAdd)
+		for k in keysToRemove:
+			del objDict[k]
+
+		return changes
 
 	def SetArea(self, area, userInfo):
-		#Validate input
+		#=Validate input=
 
 		#Get active area
 		bbox = area["active"]
 		currentArea = self.GetArea(bbox)
 
-		#All objects that are outside active area must exist in the input
-		waysPartlyOutside = self._FindPartlyOutside(area["ways"], bbox)
-		areasPartlyOutside = self._FindPartlyOutside(area["areas"], bbox)
+		#==All objects that are outside active area must exist in the input==
+		partlyOutsideWays = FindPartlyOutside(currentArea["ways"], bbox)
 
-		print len(waysPartlyOutside), len(area["ways"])
-		print waysPartlyOutside
-		print len(areasPartlyOutside), len(area["areas"])
-		print areasPartlyOutside
+		for wayId in partlyOutsideWays:
+			#wayData = partlyOutsideWays[wayId]
+			if wayId not in area["ways"]:
+				raise Exception("Way in input missing which should still exist")
+		
+		partlyOutsideAreas = FindPartlyOutside(currentArea["areas"], bbox)
+
+		for areaId in partlyOutsideAreas:
+			#areaData = partlyOutsideWays[areaId]
+			if wayId not in area["ways"]:
+				raise Exception("Area in input missing which should still exist")
+		
+		#==Check no shape modifications/deletions/additions are made outside active bbox==
+		#All nodes should be witin active area, be existing or not
+		partlyOutsideNodes = FindPartlyOutside(area["nodes"], bbox)
+		if len(partlyOutsideNodes) > 0:
+			raise Exception("Nodes cannot be added outside active area")	
 
 
-		#Check no shape modifications/deletions/additions are made outside active bbox
 		#Shape changes are silently discarded if possible (otherwise we might be comparing floats)
 
-		#Update working copy
-		
-		#Commit with userInfo details
+		#=Prepare for update=
 
+		#Number new objects
+		changes = {}
+		changes["nodes"] = self._NumberNewObjects(area["nodes"])
+		changes["ways"] = self._NumberNewObjects(area["ways"])
+		changes["areas"] = self._NumberNewObjects(area["areas"])
+
+		#Detemine outer bounding box for all objects, including those partially inside
+		
+
+		#=Update working copy=
+		#If we have reached here, we are ready to update the working copy
+
+		print "Updating working copy"
+		relevantRepos = self._FindRelevantRepos(bbox)
+		self._SetTilesInRepos(relevantRepos, area)
+		
+		
+		
+		#=Commit with userInfo details=
+
+
+		return changes
 
