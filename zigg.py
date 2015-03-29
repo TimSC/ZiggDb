@@ -172,20 +172,49 @@ class ZiggDb(object):
 
 		return merged
 
-	def SetArea(self, areaObj, userInfo):
+	def _FindPartlyOutside(self, objsDict, bbox):
+		out = {}
+		for objId in objsDict:
+			objData = objsDict[objId]
+			shapes = objData[0]
+			tags = objData[1]
+			found = False
+			for shape in shapes:
+				outer, inners = shape
+				
+				for pt in outer:
+					if not CheckPointInRect(pt, bbox):
+						found = True
+						break
+				if not found and inners is not None:
+					for inner in inners:
+						for pt in inners:
+							if not CheckPointInRect(pt, bbox):
+								found = True
+								break
+						if found:
+							break
+							
+			if found != False:
+				out[objId] = objData
+		return out
+
+	def SetArea(self, area, userInfo):
 		#Validate input
 
 		#Get active area
-		bbox = areaObj["active"]
-		relevantRepos = self._FindRelevantRepos(bbox)
-		merged = self._GetTilesFromRepos(relevantRepos, bbox)
+		bbox = area["active"]
+		currentArea = self.GetArea(bbox)
 
 		#All objects that are outside active area must exist in the input
-		outsideObjs={}
-		#outsideObjs["nodes"] = self._PartiallyInside(merged["nodes"], bbox)
-		#outsideObjs["ways"] = self._PartiallyInside(merged["ways"], bbox)
-		#outsideObjs["areas"] = self._PartiallyInside(merged["areas"], bbox)
-		#print "outsideObjs", outsideObjs
+		waysPartlyOutside = self._FindPartlyOutside(area["ways"], bbox)
+		areasPartlyOutside = self._FindPartlyOutside(area["areas"], bbox)
+
+		print len(waysPartlyOutside), len(area["ways"])
+		print waysPartlyOutside
+		print len(areasPartlyOutside), len(area["areas"])
+		print areasPartlyOutside
+
 
 		#Check no shape modifications/deletions/additions are made outside active bbox
 		#Shape changes are silently discarded if possible (otherwise we might be comparing floats)
