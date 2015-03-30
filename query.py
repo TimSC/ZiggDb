@@ -36,6 +36,17 @@ if __name__ == "__main__":
 		print diffs
 	area = area2
 
+	#Change node tags within active area (allowed)
+	area["nodes"][nodeId] = [[[[[51.129, -0.272, nodeId]], None]], {'name': 'test tag'}]
+
+	idChanges = ziggDb.SetArea(area, userInfo)
+	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	diffs = zigg.CompareAreas(area, area2)
+	if len(diffs) > 0:
+		print "Unexpected differences discovered when changing tags of node"
+		print diffs
+	area = area2
+
 	#Add point outside active area (not allowed)
 	userInfo = {}
 	newNode = [[[[[51.11, -0.272, -1]], None]], {'name': 'another place'}]

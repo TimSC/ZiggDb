@@ -129,6 +129,7 @@ def CompareAreaObjs(area1Objs, area2Objs, ty):
 		obj2 = area2Objs[objId]
 		shapes1, tags1 = obj1
 		shapes2, tags2 = obj2
+
 		if tags1 != tags2:
 			diff.append("{0} tag differences".format(ty))
 		if shapes1 != shapes2:
@@ -139,9 +140,9 @@ def CompareAreaObjs(area1Objs, area2Objs, ty):
 
 def CompareAreas(area1, area2):
 	diffs = []
-	diffs.extend(CompareAreaObjs(area1["nodes"], area1["nodes"], "node"))
-	diffs.extend(CompareAreaObjs(area1["ways"], area1["ways"], "way"))
-	diffs.extend(CompareAreaObjs(area1["areas"], area1["areas"], "area"))
+	diffs.extend(CompareAreaObjs(area1["nodes"], area2["nodes"], "node"))
+	diffs.extend(CompareAreaObjs(area1["ways"], area2["ways"], "way"))
+	diffs.extend(CompareAreaObjs(area1["areas"], area2["areas"], "area"))
 	return diffs
 
 
@@ -374,8 +375,14 @@ class ZiggDb(object):
 				
 				outShapeData.append([outerOut, innerOut])
 
-				for tag in tagData:
-					val = tagData[tag]
+				if 0:
+					for tag in tagData:
+						val = tagData[tag]
+						if not isinstance(val, basestring):
+							val = unicode(val)
+						if not isinstance(tag, basestring):
+							tag = unicode(tag)
+						outTagData[tag] = val
 		
 			out[self._ValidateUuid(objId)] = [outShapeData, outTagData]
 
@@ -390,18 +397,20 @@ class ZiggDb(object):
 
 		#==Preliminary checks==
 		#Rewrite input data to ensure valid types
-		area["nodes"] = self._RewriteInput(area["nodes"])
-		area["ways"] = self._RewriteInput(area["ways"])
-		area["areas"] = self._RewriteInput(area["areas"])
+		newArea = {}
+		newArea["active"] = map(float, area["active"][:4])
+		newArea["nodes"] = self._RewriteInput(area["nodes"])
+		newArea["ways"] = self._RewriteInput(area["ways"])
+		newArea["areas"] = self._RewriteInput(area["areas"])
 
 		#Check no UUIDs have been invented by the client
-		self._CheckUuidsAlreadyExist(area["nodes"], currentArea["nodes"])
-		self._CheckUuidsAlreadyExist(area["ways"], currentArea["ways"])
-		self._CheckUuidsAlreadyExist(area["areas"], currentArea["areas"])
+		self._CheckUuidsAlreadyExist(newArea["nodes"], currentArea["nodes"])
+		self._CheckUuidsAlreadyExist(newArea["ways"], currentArea["ways"])
+		self._CheckUuidsAlreadyExist(newArea["areas"], currentArea["areas"])
 
 		#Check nodes only have one position
-		for nodeId in area["nodes"]:
-			nodeData = area["nodes"][nodeId]
+		for nodeId in newArea["nodes"]:
+			nodeData = newArea["nodes"][nodeId]
 			shapeData, tagData = nodeData
 			if len(shapeData) != 1:
 				raise ValueError("Nodes with only one position supported")
@@ -418,8 +427,8 @@ class ZiggDb(object):
 				raise ValueError("Node UUIDs do not match")
 
 		#Check ways have no inner polys
-		for objId in area["ways"]:
-			objData = area["ways"][objId]
+		for objId in newArea["ways"]:
+			objData = newArea["ways"][objId]
 
 			shapeData, tagData = objData
 			if len(shapeData) != 1:
@@ -430,8 +439,8 @@ class ZiggDb(object):
 				raise ValueError("Ways cannot have inner area")
 
 		#Check areas have inner polys
-		for objId in area["areas"]:
-			objData = area["areas"][objId]
+		for objId in newArea["areas"]:
+			objData = newArea["areas"][objId]
 
 			shapeData, tagData = objData
 			if len(shapeData) != 1:
@@ -446,7 +455,7 @@ class ZiggDb(object):
 
 		for wayId in partlyOutsideWays:
 			#wayData = partlyOutsideWays[wayId]
-			if wayId not in area["ways"]:
+			if wayId not in newArea["ways"]:
 				raise ValueError("Way in input missing which should still exist")
 		
 		partlyOutsideAreas = FindPartlyOutside(currentArea["areas"], bbox)
@@ -468,9 +477,9 @@ class ZiggDb(object):
 
 		#Number new objects
 		changes = {}
-		changes["nodes"] = self._NumberNewObjects(area["nodes"])
-		changes["ways"] = self._NumberNewObjects(area["ways"])
-		changes["areas"] = self._NumberNewObjects(area["areas"])
+		changes["nodes"] = self._NumberNewObjects(newArea["nodes"])
+		changes["ways"] = self._NumberNewObjects(newArea["ways"])
+		changes["areas"] = self._NumberNewObjects(newArea["areas"])
 
 		#Detemine outer bounding box for all objects, including those partially inside
 		
@@ -480,7 +489,7 @@ class ZiggDb(object):
 
 		#print "Updating working copy"
 		relevantRepos = self._FindRelevantRepos(bbox)
-		self._SetTilesInRepos(relevantRepos, area)
+		self._SetTilesInRepos(relevantRepos, newArea)
 		
 		
 		
