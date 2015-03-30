@@ -178,7 +178,8 @@ class ZiggDb(object):
 
 					ziggArea = {}
 					ziggArea["nodes"] = {}
-					ziggArea["nodes"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), None]],None]],
+					nodeId = uuid.uuid4().bytes
+					ziggArea["nodes"][nodeId] = [[[[[Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), nodeId]],None]],
 						{"name": "special place"}]
 					ziggArea["ways"] = {}
 					ziggArea["ways"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .2), Interp(tl[1], br[1], .2), uuid.uuid4().bytes], 
@@ -322,6 +323,64 @@ class ZiggDb(object):
 			if objId not in existingObjsDict:
 				raise ValueError("Unknown UUID referenced")
 
+	def _ValidateUuid(self, i):
+		if isinstance(i, int):
+			return int(i)
+		if i is None:
+			return None
+		return uuid.UUID(bytes=i).bytes
+
+	def _ValidateLat(self, lat):
+		#Check lat lons are within legal bounds
+		lat = float(lat)
+		if lat < -90. or lat > 90.:
+			raise ValueError("Invalid latitude")
+		return lat
+
+	def _ValidateLon(self, lon):
+		#Check lat lons are within legal bounds
+		lon = float(lon)
+		if lon < -180. or lon > 180.:
+			raise ValueError("Invalid longitude")
+		return lon
+
+	def _RewriteInput(self, objDict):
+		out = {}
+		for objId in objDict:
+			objData = objDict[objId]
+			outShapeData = []
+			outTagData = {}
+
+			shapeData, tagData = objData
+			for shape in shapeData:
+				outer, inner = shape
+				outerOut = []
+				innerOut = None
+
+				for pt in outer:
+					if len(pt) != 3:
+						raise ValueError("Points should have 3 values")
+					outerOut.append([self._ValidateLat(pt[0]), self._ValidateLon(pt[1]), self._ValidateUuid(pt[2])])
+
+				if inner is not None:
+					innerOut = []
+					for innerPoly in inner:
+						outInnerPoly = []
+						for pt in innerPoly:
+							if len(pt) != 3:
+								raise ValueError("Points should have 3 values")
+							outInnerPoly.append([self._ValidateLat(pt[0]), self._ValidateLon(pt[1]), self._ValidateUuid(pt[2])])
+						innerOut.append(outInnerPoly)
+				
+				outShapeData.append([outerOut, innerOut])
+
+				for tag in tagData:
+					val = tagData[tag]
+		
+			out[self._ValidateUuid(objId)] = [outShapeData, outTagData]
+
+		return out
+
 	def SetArea(self, area, userInfo):
 		#=Validate input=
 
@@ -330,18 +389,57 @@ class ZiggDb(object):
 		currentArea = self.GetArea(bbox)
 
 		#==Preliminary checks==
+		#Rewrite input data to ensure valid types
+		area["nodes"] = self._RewriteInput(area["nodes"])
+		area["ways"] = self._RewriteInput(area["ways"])
+		area["areas"] = self._RewriteInput(area["areas"])
+
 		#Check no UUIDs have been invented by the client
 		self._CheckUuidsAlreadyExist(area["nodes"], currentArea["nodes"])
 		self._CheckUuidsAlreadyExist(area["ways"], currentArea["ways"])
 		self._CheckUuidsAlreadyExist(area["areas"], currentArea["areas"])
 
-		#Check nodes do not have additional node UUID
-
 		#Check nodes only have one position
+		for nodeId in area["nodes"]:
+			nodeData = area["nodes"][nodeId]
+			shapeData, tagData = nodeData
+			if len(shapeData) != 1:
+				raise ValueError("Nodes with only one position supported")
+			shape1 = shapeData[0]
+			outer1, inner1 = shape1
+			if inner1 is not None:
+				raise ValueError("Inner shape for a node should be none")
+			if len(outer1) != 1:
+				raise ValueError("Node shape should have a single point")
+
+			#Check nodes have consistent UUIDs (i.e. one per node)
+	 		pt = outer1[0]
+			if pt[2] != nodeId:
+				raise ValueError("Node UUIDs do not match")
 
 		#Check ways have no inner polys
+		for objId in area["ways"]:
+			objData = area["ways"][objId]
 
-		#Check lat lons are within legal bounds
+			shapeData, tagData = objData
+			if len(shapeData) != 1:
+				raise ValueError("Ways with only one line is supported")
+
+			outer, inner = shapeData[0]
+			if inner is not None:
+				raise ValueError("Ways cannot have inner area")
+
+		#Check areas have inner polys
+		for objId in area["areas"]:
+			objData = area["areas"][objId]
+
+			shapeData, tagData = objData
+			if len(shapeData) != 1:
+				raise ValueError("Area with only one outer poly is supported")
+
+			outer, inner = shapeData[0]
+			if inner is None:
+				raise ValueError("Areas must have list of inner polys (even if it is empty)")
 
 		#==All objects that are outside active area must exist in the input==
 		partlyOutsideWays = FindPartlyOutside(currentArea["ways"], bbox)
@@ -363,7 +461,6 @@ class ZiggDb(object):
 		partlyOutsideNodes = FindPartlyOutside(area["nodes"], bbox)
 		if len(partlyOutsideNodes) > 0:
 			raise ValueError("Nodes cannot be added outside active area")	
-
 
 		#Shape changes are silently discarded if possible (otherwise we might be comparing floats)
 

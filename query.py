@@ -15,7 +15,7 @@ if __name__ == "__main__":
 
 	#Add point within active area (allowed)
 	userInfo = {}
-	newNode = [[[[[51.129, -0.272, None]], None]], {'name': 'another place'}]
+	newNode = [[[[[51.129, -0.272, -1]], None]], {'name': 'another place'}]
 	area["nodes"][-1] = newNode
 	idChanges = ziggDb.SetArea(area, userInfo)
 	nodeId = idChanges["nodes"].values()[0]
@@ -27,7 +27,7 @@ if __name__ == "__main__":
 	area = area2
 
 	#Move point within active area (allowed)
-	area["nodes"][nodeId] = [[[[[51.129, -0.272, None]], None]], {'name': 'another place'}]
+	area["nodes"][nodeId] = [[[[[51.129, -0.272, nodeId]], None]], {'name': 'another place'}]
 	idChanges = ziggDb.SetArea(area, userInfo)
 	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 	diffs = zigg.CompareAreas(area, area2)
@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
 	#Add point outside active area (not allowed)
 	userInfo = {}
-	newNode = [[[[[51.11, -0.272, None]], None]], {'name': 'another place'}]
+	newNode = [[[[[51.11, -0.272, -1]], None]], {'name': 'another place'}]
 	area["nodes"][-1] = newNode
 	ex = False
 	try:
@@ -82,6 +82,9 @@ if __name__ == "__main__":
 		ex = True
 	if not ex:
 		print "Unexpected lack of expection when moving node outside active area"
+
+	#Upload node with non-matching UUIDs
+	
 
 	#Uploading node with multiple locations (not allowed)
 
