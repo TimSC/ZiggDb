@@ -97,11 +97,15 @@ if __name__ == "__main__":
 	if not ex:
 		print "Unexpected lack of expection when moving node outside active area"
 
-	#Upload node with non-matching UUIDs
+	#Upload node with non-matching UUIDs (not allowed)
 	
-
 	#Uploading node with multiple locations (not allowed)
 
+	#Upload node with inner polygon (not allowed)
+
+	#Upload node with multiple positions (not allowed)
+
+	#Upload node with invalid lat/lon
 
 	#==Way operations==
 	#Basic concept: The shapes of ways outside the active area is constant.
