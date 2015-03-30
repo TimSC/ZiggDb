@@ -4,6 +4,10 @@ import zigg
 import bz2, cPickle, uuid
 
 if __name__ == "__main__":
+	testPass = 0
+	testFail = 0
+	testWarning = 0
+
 	ziggDb = zigg.ZiggDb()
 
 	ziggDb.GenerateTestData()
@@ -27,6 +31,9 @@ if __name__ == "__main__":
 	if len(diffs) > 0:
 		print "Unexpected differences discovered when adding node"
 		print diffs
+		testFail += 1
+	else:
+		testPass += 1
 	area = area2
 
 	#Move point within active area (allowed)
@@ -37,6 +44,9 @@ if __name__ == "__main__":
 	if len(diffs) > 0:
 		print "Unexpected differences discovered when moving node"
 		print diffs
+		testFail += 1
+	else:
+		testPass += 1
 	area = area2
 
 	#Change node tags within active area (allowed)
@@ -48,6 +58,9 @@ if __name__ == "__main__":
 	if len(diffs) > 0:
 		print "Unexpected differences discovered when changing tags of node"
 		print diffs
+		testFail += 1
+	else:
+		testPass += 1
 	area = area2
 
 	#Add point outside active area (not allowed)
@@ -61,6 +74,9 @@ if __name__ == "__main__":
 		ex = True
 	if not ex:
 		print "Unexpected lack of expection when adding node outside active area"
+		testFail += 1
+	else:
+		testPass += 1
 
 	#Move point in, from or into outside active area (not allowed)
 	area["nodes"][nodeId] = [[[[[51.11, -0.272, None]], None]], {'name': 'another place'}]
@@ -71,6 +87,9 @@ if __name__ == "__main__":
 		ex = True
 	if not ex:
 		print "Unexpected lack of expection when moving node outside active area"
+		testFail += 1
+	else:
+		testPass += 1
 
 	#Delete point outside active area (not allowed)
 	#In fact there should never been single nodes outside the active area
@@ -84,6 +103,9 @@ if __name__ == "__main__":
 	if len(diffs) > 0:
 		print "Unexpected differences discovered when moving node"
 		print diffs
+		testFail += 1
+	else:
+		testPass += 1
 	area = area2
 
 	#Create a point with a client specified UUID (not allowed)
@@ -95,7 +117,10 @@ if __name__ == "__main__":
 	except:
 		ex = True
 	if not ex:
+		testFail += 1
 		print "Unexpected lack of expection when moving node outside active area"
+	else:
+		testPass += 1
 
 	#Upload node with non-matching UUIDs (not allowed)
 	
@@ -131,5 +156,6 @@ if __name__ == "__main__":
 	#Basic concept: The shapes of areas outside the active area is constant.
 	#Rationale: Shape many be moved into a different data tile; that would be complicated
 	
-
+	print "Tests passed", testPass
+	print "Tests failed", testFail
 
