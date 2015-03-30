@@ -315,6 +315,9 @@ class ZiggDb(object):
 		for k in keysToRemove:
 			del objDict[k]
 
+		#Update UUIDs for nodes within object
+		#TODO
+
 		return changes
 
 	def _CheckUuidsAlreadyExist(self, newObjsDict, existingObjsDict):
@@ -375,14 +378,13 @@ class ZiggDb(object):
 				
 				outShapeData.append([outerOut, innerOut])
 
-				if 0:
-					for tag in tagData:
-						val = tagData[tag]
-						if not isinstance(val, basestring):
-							val = unicode(val)
-						if not isinstance(tag, basestring):
-							tag = unicode(tag)
-						outTagData[tag] = val
+				for tag in tagData:
+					val = tagData[tag]
+					if not isinstance(val, str):
+						val = unicode(val)
+					if not isinstance(tag, str):
+						tag = unicode(tag)
+					outTagData[tag] = val
 		
 			out[self._ValidateUuid(objId)] = [outShapeData, outTagData]
 
