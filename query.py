@@ -17,9 +17,12 @@ if __name__ == "__main__":
 	userInfo = {}
 	newNode = [[[[[51.129, -0.272, -1]], None]], {'name': 'another place'}]
 	area["nodes"][-1] = newNode
+	#print area["nodes"]
 	idChanges = ziggDb.SetArea(area, userInfo)
+	zigg.ApplyIdChanges(area, idChanges)
 	nodeId = idChanges["nodes"].values()[0]
 	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	#print area2["nodes"]
 	diffs = zigg.CompareAreas(area, area2)
 	if len(diffs) > 0:
 		print "Unexpected differences discovered when adding node"

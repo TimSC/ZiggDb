@@ -145,6 +145,12 @@ def CompareAreas(area1, area2):
 	diffs.extend(CompareAreaObjs(area1["areas"], area2["areas"], "area"))
 	return diffs
 
+def ApplyIdChanges(area, idChanges):
+	for objType in idChanges:
+		tyChanges = idChanges[objType]
+		for ch in tyChanges:
+			area[objType][tyChanges[ch]] = area[objType][ch]
+			del area[objType][ch]
 
 
 # ****************** Main class **********************
