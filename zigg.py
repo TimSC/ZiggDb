@@ -385,7 +385,10 @@ class ZiggDb(object):
 				outShapeData.append([outerOut, innerOut])
 
 				for tag in tagData:
-					val = tagData[tag]
+					try:
+						val = tagData[tag]
+					except:
+						raise ValueError("Invalid tag data")
 					if not isinstance(val, str):
 						val = unicode(val)
 					if not isinstance(tag, str):

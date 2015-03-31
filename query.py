@@ -207,6 +207,20 @@ if __name__ == "__main__":
 	else:
 		testPass += 1
 
+	#Upload a node with invalid tag info
+	newNode = [[[[[51.129, -0.272, -1]], None]], ['name', 'another place']]
+	area["nodes"][-1] = newNode
+	ex = False
+	try:
+		idChanges = ziggDb.SetArea(area, userInfo)
+	except ValueError as err:
+		ex = True
+	if not ex:
+		testFail += 1
+		print "Unexpected lack of expection when adding node with invalid tags"
+	else:
+		testPass += 1
+
 	#==Way operations==
 	#Basic concept: The shapes of ways outside the active area is constant.
 	#Rationale: Shape many be moved into a different data tile; that would be complicated
