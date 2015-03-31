@@ -133,7 +133,7 @@ def CompareAreaObjs(area1Objs, area2Objs, ty):
 		if tags1 != tags2:
 			diff.append("{0} tag differences".format(ty))
 		if shapes1 != shapes2:
-			diff.append("{0} shape/location differences".format(ty))
+			diff.append("{0} shape/location/member id differences".format(ty))
 		#print tags1, tags2
 
 	return diff
@@ -146,11 +146,40 @@ def CompareAreas(area1, area2):
 	return diffs
 
 def ApplyIdChanges(area, idChanges):
+
+	#Change dict IDs
 	for objType in idChanges:
 		tyChanges = idChanges[objType]
 		for ch in tyChanges:
 			area[objType][tyChanges[ch]] = area[objType][ch]
 			del area[objType][ch]
+
+	#Change member node IDs
+	nodeChanges = idChanges["nodes"]
+	for objType in area:
+		if objType not in ["nodes", "ways", "areas"]: continue
+
+		typeObjs = area[objType]
+		for objId in typeObjs:
+			objData = typeObjs[objId]
+			
+			#Update member UUIDs
+			shapes, tags = objData
+			for shape in shapes:
+				outer, inners = shape
+				for pt in outer:
+					ptId = pt[2]
+					if not isinstance(ptId, int):
+						continue
+					pt[2] = nodeChanges[ptId]
+
+				if inners is None: continue
+				for inner in inners:
+					for pt in inner:
+						ptId = pt[2]
+						if not isinstance(ptId, int):
+							continue
+						pt[2] = nodeChanges[ptId]
 
 
 # ****************** Main class **********************
@@ -303,28 +332,61 @@ class ZiggDb(object):
 
 		return merged
 
-	def _NumberNewObjects(self, objDict):
-		changes = {}
+	def _GetUuidFromNegId(self, nid, typeChanges):
+		if nid not in typeChanges:
+			newId = uuid.uuid4().bytes
+			typeChanges[nid] = newId
+			return newId
+
+		return typeChanges[nid]		
+
+	def _NumberNewObjects(self, objDict, objType, changes):
+
 		keysToRemove = []
 		dataToAdd = {}
+		typeChanges = changes[objType+"s"]
+		nodeChanges = changes["nodes"]
+
 		for ndId in objDict:
 			if not isinstance(ndId, int):
 				continue
 			ndId = int(ndId)
 			if ndId >= 0:
 				raise ValueError("New objects must have negitive ids")	
-			newId = uuid.uuid4().bytes
-			dataToAdd[newId] = objDict[ndId]
+
+			newId = self._GetUuidFromNegId(ndId, typeChanges)
+			objData = objDict[ndId]
+
+			#Update dict UUID
+			dataToAdd[newId] = objData
 			keysToRemove.append(ndId)
-			changes[ndId] = newId
+
+		for ndId in objDict:
+			objData = objDict[ndId]
+
+			#Update member UUIDs
+			shapes, tags = objData
+			for shape in shapes:
+				outer, inners = shape
+				for pt in outer:
+					ptId = pt[2]
+					if not isinstance(ptId, int):
+						continue
+					newId = self._GetUuidFromNegId(ptId, nodeChanges)
+					pt[2] = newId
+
+				if inners is None: continue
+				for inner in inners:
+					for pt in inner:
+						ptId = pt[2]
+						if not isinstance(ptId, int):
+							continue
+						newId = self._GetUuidFromNegId(ptId, nodeChanges)
+						pt[2] = newId
+
 		objDict.update(dataToAdd)
 		for k in keysToRemove:
 			del objDict[k]
-
-		#Update UUIDs for nodes within object
-		#TODO
-
-		return changes
 
 	def _CheckUuidsAlreadyExist(self, newObjsDict, existingObjsDict):
 		for objId in newObjsDict:
@@ -487,10 +549,10 @@ class ZiggDb(object):
 		#=Prepare for update=
 
 		#Number new objects
-		changes = {}
-		changes["nodes"] = self._NumberNewObjects(newArea["nodes"])
-		changes["ways"] = self._NumberNewObjects(newArea["ways"])
-		changes["areas"] = self._NumberNewObjects(newArea["areas"])
+		changes = {"nodes":{}, "ways":{}, "areas":{}}
+		self._NumberNewObjects(newArea["nodes"], "node", changes)
+		self._NumberNewObjects(newArea["ways"], "way", changes)
+		self._NumberNewObjects(newArea["areas"] , "area", changes)
 
 		#Detemine outer bounding box for all objects, including those partially inside
 		
