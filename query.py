@@ -94,6 +94,51 @@ if __name__ == "__main__":
 	#Delete point outside active area (not allowed)
 	#In fact there should never been single nodes outside the active area
 
+	#Create a point with a client specified UUID (not allowed)
+	userInfo = {}
+	newNode = [[[[[51.129, -0.272, None]], None]], {'name': 'another place'}]
+	area["nodes"][uuid.uuid4().bytes] = newNode
+	ex = False
+	try:
+		idChanges = ziggDb.SetArea(area, userInfo)
+	except:
+		ex = True
+	if not ex:
+		testFail += 1
+		print "Unexpected lack of expection when moving node outside active area"
+	else:
+		testPass += 1
+
+	#Upload node with non-matching UUIDs (not allowed)
+	newNode = [[[[[51.129, -0.272, -2]], None]], {'name': 'another place'}]
+	area["nodes"][-1] = newNode
+	ex = False
+	try:
+		idChanges = ziggDb.SetArea(area, userInfo)
+	except ValueError as err:
+		ex = True
+	if not ex:
+		testFail += 1
+		print "Unexpected lack of expection when adding node with wrong ID"
+	else:
+		testPass += 1
+	
+	#Modify node by changing its UUID (not allowed)
+	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	nodeId1 = area["nodes"].keys()[0]
+	nodeId2 = area["nodes"].keys()[1]
+	area["nodes"][nodeId1] = [[[[[51.129, -0.272, nodeId2]], None]], {'name': 'another place'}]
+	ex = False
+	try:
+		idChanges = ziggDb.SetArea(area, userInfo)
+	except ValueError as err:
+		ex = True		
+	if not ex:
+		testFail += 1
+		print "Unexpected lack of expection when modifying node with wrong ID"
+	else:
+		testPass += 1
+
 	#Delete point within active area (allowed)
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 	del area["nodes"][nodeId]
@@ -108,29 +153,47 @@ if __name__ == "__main__":
 		testPass += 1
 	area = area2
 
-	#Create a point with a client specified UUID (not allowed)
-	userInfo = {}
-	newNode = [[[[[51.129, -0.272, None]], None]], {'name': 'another place'}]
-	area["nodes"][uuid.uuid4().bytes] = newNode
+	#Uploading node with multiple locations (not allowed)
+	newNode = [[[[[51.129, -0.272, -1], [51.1291, -0.2721, -1]], None]], {'name': 'another place'}]
+	area["nodes"][-1] = newNode
+	ex = False
 	try:
 		idChanges = ziggDb.SetArea(area, userInfo)
-	except:
+	except ValueError as err:
 		ex = True
 	if not ex:
 		testFail += 1
-		print "Unexpected lack of expection when moving node outside active area"
+		print "Unexpected lack of expection when adding node with multiple locations"
 	else:
 		testPass += 1
 
-	#Upload node with non-matching UUIDs (not allowed)
-	
-	#Uploading node with multiple locations (not allowed)
-
 	#Upload node with inner polygon (not allowed)
-
-	#Upload node with multiple positions (not allowed)
+	newNode = [[[[[51.129, -0.272, -1]], []]], {'name': 'another place'}]
+	area["nodes"][-1] = newNode
+	ex = False
+	try:
+		idChanges = ziggDb.SetArea(area, userInfo)
+	except ValueError as err:
+		ex = True
+	if not ex:
+		testFail += 1
+		print "Unexpected lack of expection when adding node with inner polygon"
+	else:
+		testPass += 1
 
 	#Upload node with invalid lat/lon
+	newNode = [[[[[-90.1, -0.272, -1]], None]], {'name': 'another place'}]
+	area["nodes"][-1] = newNode
+	ex = False
+	try:
+		idChanges = ziggDb.SetArea(area, userInfo)
+	except ValueError as err:
+		ex = True
+	if not ex:
+		testFail += 1
+		print "Unexpected lack of expection when adding node with invalid position"
+	else:
+		testPass += 1
 
 	#==Way operations==
 	#Basic concept: The shapes of ways outside the active area is constant.
