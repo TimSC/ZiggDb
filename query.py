@@ -193,7 +193,7 @@ if __name__ == "__main__":
 	else:
 		testPass += 1
 
-	#Upload node with invalid lat/lon
+	#Upload node with invalid lat/lon (not allowed)
 	newNode = [[[[[-90.1, -0.272, -1]], None]], {'name': 'another place'}]
 	area["nodes"][-1] = newNode
 	ex = False
@@ -207,7 +207,7 @@ if __name__ == "__main__":
 	else:
 		testPass += 1
 
-	#Upload a node with invalid tag info
+	#Upload a node with invalid tag info (not allowed)
 	newNode = [[[[[51.129, -0.272, -1]], None]], ['name', 'another place']]
 	area["nodes"][-1] = newNode
 	ex = False
@@ -220,6 +220,8 @@ if __name__ == "__main__":
 		print "Unexpected lack of expection when adding node with invalid tags"
 	else:
 		testPass += 1
+
+	#Upload two nodes with the same negative id (not allowed)
 
 	#==Way operations==
 	#Basic concept: The shapes of ways outside the active area is constant.
