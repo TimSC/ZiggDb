@@ -26,14 +26,26 @@ if __name__ == "__main__":
 	zigg.ApplyIdChanges(area, idChanges)
 	nodeId = idChanges["nodes"].values()[0]
 	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	nodeData = area2["nodes"][nodeId]
 	#print area2["nodes"]
 	diffs = zigg.CompareAreas(area, area2)
+	ok = True
 	if len(diffs) > 0:
 		print "Unexpected differences discovered when adding node"
 		print diffs
-		testFail += 1
-	else:
+		ok = False
+	
+	#Check node ID has been updated
+	nodeId2 = nodeData[0][0][0][0][2]
+	if nodeId != nodeId2:
+		print "Incorrect node ID in data when adding node"
+		ok = False
+
+	if ok:
 		testPass += 1
+	else:
+		testFail += 1
+
 	area = area2
 
 	#Move point within active area (allowed)
