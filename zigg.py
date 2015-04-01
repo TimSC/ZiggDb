@@ -528,6 +528,9 @@ class ZiggDb(object):
 			if inner is None:
 				raise ValueError("Areas must have list of inner polys (even if it is empty)")
 
+		
+
+
 		#==All objects that are outside active area must exist in the input==
 		partlyOutsideWays = FindPartlyOutside(currentArea["ways"], bbox)
 
@@ -548,6 +551,36 @@ class ZiggDb(object):
 		partlyOutsideNodes = FindPartlyOutside(area["nodes"], bbox)
 		if len(partlyOutsideNodes) > 0:
 			raise ValueError("Nodes cannot be added outside active area")	
+
+		#All new ways and area member nodes should be within active area
+		for objType in ["ways", "areas"]:
+			objDict = area[objType]
+			
+			for objId in objDict:
+				objData = objDict[objId]
+				outside = False
+				shapeData, tagData = objData
+				for shape in shapeData:
+					outer, inners = shape
+					for pt in outer:
+						ptId = pt[2]
+						if not isinstance(ptId, int): continue
+						
+						if not CheckPointInRect(pt, bbox): 
+							outside = True
+							break
+
+					if inners is None: continue
+					for inner in inners:
+						for pt in inner:
+							ptId = pt[2]
+							if not isinstance(ptId, int): continue
+							if not CheckPointInRect(pt, bbox): 
+								outside = True
+								break
+				
+				if outside:
+					raise ValueError("Cannot add nodes outside active area")
 
 		#Shape changes are silently discarded if possible (otherwise we might be comparing floats)
 

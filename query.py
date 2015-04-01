@@ -252,10 +252,22 @@ if __name__ == "__main__":
 	else:
 		testFail += 1
 
-	#Create way partly within active area (allowed)
-
-	#Create way partly outside active area (not allowed)
-
+	#Create way partly or fully outside active area (not allowed)
+	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	userInfo = {}
+	newWay = [[[[[61.128, -0.271, -1], [61.127, -0.269, -2]], None]], {'name': 'far away road'}]
+	area["ways"][-1] = newWay
+	ex = False
+	try:
+		idChanges = ziggDb.SetArea(area, userInfo)
+	except ValueError:
+		ex = True
+	if not ex:
+		testFail += 1
+		print "Unexpected lack of expection when adding way outside active area"
+	else:
+		testPass += 1
+	
 	#Modify tags of way within or partly within active area (allowed)
 
 	#Reorder nodes in way that is partially outside active area (allowed)
