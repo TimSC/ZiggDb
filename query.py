@@ -85,7 +85,7 @@ if __name__ == "__main__":
 	except ValueError as err:
 		ex = True
 	if not ex:
-		print "Unexpected lack of expection when adding node outside active area"
+		print "Unexpected lack of exception when adding node outside active area"
 		testFail += 1
 	else:
 		testPass += 1
@@ -98,7 +98,7 @@ if __name__ == "__main__":
 	except:
 		ex = True
 	if not ex:
-		print "Unexpected lack of expection when moving node outside active area"
+		print "Unexpected lack of exception when moving node outside active area"
 		testFail += 1
 	else:
 		testPass += 1
@@ -117,7 +117,7 @@ if __name__ == "__main__":
 		ex = True
 	if not ex:
 		testFail += 1
-		print "Unexpected lack of expection when moving node outside active area"
+		print "Unexpected lack of exception when moving node outside active area"
 	else:
 		testPass += 1
 
@@ -131,7 +131,7 @@ if __name__ == "__main__":
 		ex = True
 	if not ex:
 		testFail += 1
-		print "Unexpected lack of expection when adding node with wrong ID"
+		print "Unexpected lack of exception when adding node with wrong ID"
 	else:
 		testPass += 1
 	
@@ -147,7 +147,7 @@ if __name__ == "__main__":
 		ex = True		
 	if not ex:
 		testFail += 1
-		print "Unexpected lack of expection when modifying node with wrong ID"
+		print "Unexpected lack of exception when modifying node with wrong ID"
 	else:
 		testPass += 1
 
@@ -175,7 +175,7 @@ if __name__ == "__main__":
 		ex = True
 	if not ex:
 		testFail += 1
-		print "Unexpected lack of expection when adding node with multiple locations"
+		print "Unexpected lack of exception when adding node with multiple locations"
 	else:
 		testPass += 1
 
@@ -189,7 +189,7 @@ if __name__ == "__main__":
 		ex = True
 	if not ex:
 		testFail += 1
-		print "Unexpected lack of expection when adding node with inner polygon"
+		print "Unexpected lack of exception when adding node with inner polygon"
 	else:
 		testPass += 1
 
@@ -203,7 +203,7 @@ if __name__ == "__main__":
 		ex = True
 	if not ex:
 		testFail += 1
-		print "Unexpected lack of expection when adding node with invalid position"
+		print "Unexpected lack of exception when adding node with invalid position"
 	else:
 		testPass += 1
 
@@ -217,7 +217,7 @@ if __name__ == "__main__":
 		ex = True
 	if not ex:
 		testFail += 1
-		print "Unexpected lack of expection when adding node with invalid tags"
+		print "Unexpected lack of exception when adding node with invalid tags"
 	else:
 		testPass += 1
 
@@ -246,6 +246,7 @@ if __name__ == "__main__":
 		print "Unexpected differences discovered when adding node"
 		print diffs
 		ok = False
+	area = area2
 
 	#Check ids of nodes within new way
 	wayShape, wayTags = wayData
@@ -275,7 +276,24 @@ if __name__ == "__main__":
 		testFail += 1
 
 	#Modify tags of way within or partly within active area (allowed)
-	print newWayNodeIds
+	wayData = area["ways"][wayId]
+	wayData[1]["name"] = "new named road"
+	idChanges = ziggDb.SetArea(area, userInfo)
+	zigg.ApplyIdChanges(area, idChanges)
+
+	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	#wayData = area2["ways"][wayId]
+	#print area2["nodes"]
+	diffs = zigg.CompareAreas(area, area2)
+	ok = True
+	if len(diffs) > 0:
+		print "Unexpected differences discovered when adding node"
+		print diffs
+		ok = False
+	if ok:
+		testPass += 1
+	else:
+		testFail += 1
 
 	#Reorder nodes in way that is partially outside active area (allowed)
 	
@@ -291,7 +309,7 @@ if __name__ == "__main__":
 		ex = True
 	if not ex:
 		testFail += 1
-		print "Unexpected lack of expection when adding way outside active area"
+		print "Unexpected lack of exception when adding way outside active area"
 	else:
 		testPass += 1
 	
