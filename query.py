@@ -247,11 +247,19 @@ if __name__ == "__main__":
 		print diffs
 		ok = False
 
+	#Check ids of nodes within new way
+	wayShape, wayTags = wayData
+	print wayShape
+
 	if ok:
 		testPass += 1
 	else:
 		testFail += 1
 
+	#Modify tags of way within or partly within active area (allowed)
+
+	#Reorder nodes in way that is partially outside active area (allowed)
+	
 	#Create way partly or fully outside active area (not allowed)
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 	userInfo = {}
@@ -268,9 +276,6 @@ if __name__ == "__main__":
 	else:
 		testPass += 1
 	
-	#Modify tags of way within or partly within active area (allowed)
-
-	#Reorder nodes in way that is partially outside active area (allowed)
 	
 	#Add or remove nodes from a way that are outside the active area (not allowed)
 
