@@ -222,12 +222,35 @@ if __name__ == "__main__":
 		testPass += 1
 
 	#Upload two nodes with the same negative id (not allowed)
+	#This is actually impossible because a dict can only have one value per key
 
 	#==Way operations==
 	#Basic concept: The shapes of ways outside the active area is constant.
 	#Rationale: Shape many be moved into a different data tile; that would be complicated
 
 	#Create way full within active area (allowed)
+	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	userInfo = {}
+	newWay = [[[[[51.128, -0.271, -1], [51.127, -0.269, -2]], None]], {'name': 'old road'}]
+	area["ways"][-1] = newWay
+	idChanges = ziggDb.SetArea(area, userInfo)
+	zigg.ApplyIdChanges(area, idChanges)
+	wayId = idChanges["ways"].values()[0]
+	
+	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	wayData = area2["ways"][wayId]
+	#print area2["nodes"]
+	diffs = zigg.CompareAreas(area, area2)
+	ok = True
+	if len(diffs) > 0:
+		print "Unexpected differences discovered when adding node"
+		print diffs
+		ok = False
+
+	if ok:
+		testPass += 1
+	else:
+		testFail += 1
 
 	#Create way partly within active area (allowed)
 
@@ -242,6 +265,8 @@ if __name__ == "__main__":
 	#Delete way within active area (allowed)	
 
 	#Delete way partly within or outside active area (not allowed)
+
+	#Upload objects with contraditory positions for a shared UUID node (allowed, silently fixed)
 
 	#==Area operations==
 	#Basic concept: The shapes of areas outside the active area is constant.

@@ -151,6 +151,7 @@ def ApplyIdChanges(area, idChanges):
 	for objType in idChanges:
 		tyChanges = idChanges[objType]
 		for ch in tyChanges:
+			if ch not in area[objType]: continue
 			area[objType][tyChanges[ch]] = area[objType][ch]
 			del area[objType][ch]
 
@@ -445,12 +446,16 @@ class ZiggDb(object):
 						innerOut.append(outInnerPoly)
 				
 				outShapeData.append([outerOut, innerOut])
+				try:
+					tagKeys = tagData.keys()
+				except AttributeError:
+					raise ValueError("Tag container does not have keys method")
 
-				for tag in tagData:
+				for tag in tagKeys:
 					try:
 						val = tagData[tag]
 					except:
-						raise ValueError("Invalid tag data")
+						raise ValueError("Invalid tag data for key "+str(tag))
 					if not isinstance(val, str):
 						val = unicode(val)
 					if not isinstance(tag, str):
