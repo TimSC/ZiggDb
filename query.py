@@ -249,7 +249,25 @@ if __name__ == "__main__":
 
 	#Check ids of nodes within new way
 	wayShape, wayTags = wayData
-	print wayShape
+	newWayNodeIds = []
+	if len(wayShape) == 1:
+		outer, inners = wayShape[0]
+		if len(outer) != 2:
+			print "Way has unexpected length"
+			ok = False			
+
+		for pt in outer:
+			if isinstance(pt[2], int):
+				print "Nodes in way have not been renumbered"
+				ok = False
+			newWayNodeIds.append(pt[2])
+
+		if inners is not None:
+			print "Ways should have no inners information"
+			ok = False
+	else:
+		print "Way shape has wrong length"
+		ok = False
 
 	if ok:
 		testPass += 1
@@ -257,6 +275,7 @@ if __name__ == "__main__":
 		testFail += 1
 
 	#Modify tags of way within or partly within active area (allowed)
+	print newWayNodeIds
 
 	#Reorder nodes in way that is partially outside active area (allowed)
 	
