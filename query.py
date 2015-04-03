@@ -336,6 +336,14 @@ if __name__ == "__main__":
 	else:
 		testPass += 1
 	
+	#Create a way across internal tile boundary (allowed)
+
+	#Modify way tags across tile boundary (allowed)
+
+	#Move point inside active area across internal tile boundary (allowed)
+
+	#Add point to way that crosses internal tile boundary (allowed)
+
 	#Move a node in a way outside the active area (silently ignored)
 
 	
