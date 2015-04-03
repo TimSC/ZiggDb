@@ -281,7 +281,8 @@ if __name__ == "__main__":
 	idChanges = ziggDb.SetArea(area, userInfo)
 	zigg.ApplyIdChanges(area, idChanges)
 
-	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	bbox = [-0.3, 51.12, -0.19, 51.17]
+	area2 = ziggDb.GetArea(bbox)
 	#wayData = area2["ways"][wayId]
 	#print area2["nodes"]
 	diffs = zigg.CompareAreas(area, area2)
@@ -294,9 +295,30 @@ if __name__ == "__main__":
 		testPass += 1
 	else:
 		testFail += 1
+	area = area2
 
 	#Reorder nodes in way that is partially outside active area (allowed)
-	
+	waysPartlyInside = zigg.FindPartlyOutside(area["ways"], bbox)
+	testWayUuid = waysPartlyInside.keys()[0]
+	testWayData = area["ways"][testWayUuid]
+	wayShape, wayTags = testWayData
+	wayPoly = wayShape[0]
+	outer, inners = wayPoly
+	wayPoly = outer[::-1]
+	idChanges = ziggDb.SetArea(area, userInfo)
+	zigg.ApplyIdChanges(area, idChanges)
+	area2 = ziggDb.GetArea(bbox)
+	diffs = zigg.CompareAreas(area, area2)
+	ok = True
+	if len(diffs) > 0:
+		print "Unexpected differences discovered when adding node"
+		print diffs
+		ok = False
+	if ok:
+		testPass += 1
+	else:
+		testFail += 1
+
 	#Create way partly or fully outside active area (not allowed)
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 	userInfo = {}

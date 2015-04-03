@@ -323,6 +323,10 @@ class ZiggDb(object):
 					cPickle.dump(tileData, open(tilePath, "wt"))
 
 	def GetArea(self, bbox):
+		if len(bbox) != 4: 
+			raise ValueError("bbox should have 4 values")
+		bbox = map(float, bbox)
+
 		relevantRepos = self._FindRelevantRepos(bbox)
 		merged = self._GetTilesFromRepos(relevantRepos, bbox)
 
@@ -471,6 +475,8 @@ class ZiggDb(object):
 
 		#Get active area
 		bbox = area["active"]
+		if len(bbox) != 4: 
+			raise ValueError("bbox should have 4 values")
 		currentArea = self.GetArea(bbox)
 
 		#==Preliminary checks==
@@ -527,9 +533,6 @@ class ZiggDb(object):
 			outer, inner = shapeData[0]
 			if inner is None:
 				raise ValueError("Areas must have list of inner polys (even if it is empty)")
-
-		
-
 
 		#==All objects that are outside active area must exist in the input==
 		partlyOutsideWays = FindPartlyOutside(currentArea["ways"], bbox)
