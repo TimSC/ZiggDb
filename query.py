@@ -307,6 +307,7 @@ if __name__ == "__main__":
 	wayPoly = outer[::-1]
 	idChanges = ziggDb.SetArea(area, userInfo)
 	zigg.ApplyIdChanges(area, idChanges)
+
 	area2 = ziggDb.GetArea(bbox)
 	diffs = zigg.CompareAreas(area, area2)
 	ok = True
@@ -337,6 +338,30 @@ if __name__ == "__main__":
 	
 	
 	#Add or remove nodes from a way that are outside the active area (not allowed)
+	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	waysPartlyInside = zigg.FindPartlyOutside(area["ways"], bbox)
+	testWayUuid = waysPartlyInside.keys()[0]
+	testWayData = area["ways"][testWayUuid]
+	wayShape, wayTags = testWayData
+	wayPoly = wayShape[0]
+	outer, inners = wayPoly
+	insidePts = []
+	for pt in outer:
+		inside = zigg.CheckPointInRect(pt, bbox)
+		if not inside: continue
+		insidePts.append(pt)
+	wayPoly[0] = insidePts
+
+	ex = False
+	try:
+		idChanges = ziggDb.SetArea(area, userInfo)
+	except ValueError:
+		ex = True
+	if not ex:
+		testFail += 1
+		print "Unexpected lack of exception when removing outside node from way"
+	else:
+		testPass += 1
 
 	#Delete way within active area (allowed)	
 
