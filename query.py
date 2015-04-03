@@ -1,7 +1,7 @@
 
 
 import zigg
-import bz2, cPickle, uuid
+import bz2, cPickle, uuid, slippy
 
 if __name__ == "__main__":
 	testPass = 0
@@ -337,6 +337,8 @@ if __name__ == "__main__":
 		testPass += 1
 	
 	#Create a way across internal tile boundary (allowed)
+	#print slippy.num2deg(2044, 1369, 12)
+
 
 	#Modify way tags across tile boundary (allowed)
 
@@ -354,13 +356,19 @@ if __name__ == "__main__":
 	testWayData = area["ways"][testWayUuid]
 	wayShape, wayTags = testWayData
 	wayPoly = wayShape[0]
+
+	print testWayUuid
 	outer, inners = wayPoly
+	print len(outer)
+
 	insidePts = []
 	for pt in outer:
 		inside = zigg.CheckPointInRect(pt, bbox)
 		if not inside: continue
 		insidePts.append(pt)
 	wayPoly[0] = insidePts
+
+	print len(insidePts)
 
 	ex = False
 	try:

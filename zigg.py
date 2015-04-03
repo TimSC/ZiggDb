@@ -584,6 +584,45 @@ class ZiggDb(object):
 				
 				if outside:
 					raise ValueError("Cannot add nodes outside active area")
+		
+		#No nodes within way/area should be removed if they are outside active area
+		for objType in currentArea:
+			if objType == "active": continue
+			existingObjDict = currentArea[objType]
+			newObjDict = area[objType]
+			for objId in existingObjDict:
+				if objId not in newObjDict: continue
+				objDataExisting = existingObjDict[objId]
+				objDataNew = newObjDict[objId]
+				
+				existingShapeData, existingTagData = objDataExisting
+				newShapeData, newTagData = objDataNew
+				for existingShape, newShape in zip(existingShapeData, newShapeData):
+
+					outer, inners = existingShape
+					newOuter, newInners = newShape
+
+					#Check the nodes we expect in outer way
+					outerIds = set()
+					for pt in outer:
+						if not CheckPointInRect(pt, bbox): continue
+						outerIds.add(pt[2])
+
+					#Check expected nodes exist in new data
+					newIds = set([pt[2] for pt in newOuter])
+					print objId, len(outerIds), len(newIds)
+					for nid in outerIds:
+						if nid not in newIds:
+							raise ValueError("Cannot add nodes outside active area")
+
+					if inners is None: continue
+					for inner in inners:
+						innerIds = set()
+						for pt in inner:
+							if not CheckPointInRect(pt, bbox): continue
+							innerIds.add(pt[2])
+						#print "i", innerIds						
+		
 
 		#Shape changes are silently discarded if possible (otherwise we might be comparing floats)
 
