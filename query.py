@@ -336,6 +336,8 @@ if __name__ == "__main__":
 	else:
 		testPass += 1
 	
+	#Move a node in a way outside the active area (silently ignored)
+
 	
 	#Add or remove nodes from a way that are outside the active area (not allowed)
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
