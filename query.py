@@ -475,7 +475,15 @@ if __name__ == "__main__":
 	waysInside = zigg.FindPartlyOutside(area["ways"], bbox)
 	wayToDel = waysInside.keys()[0]
 	del area["ways"][wayToDel]
-	idChanges = ziggDb.SetArea(area, userInfo)
+	try:
+		idChanges = ziggDb.SetArea(area, userInfo)
+	except ValueError:
+		ex = True
+	if not ex:
+		testFail += 1
+		print "Unexpected lack of exception when deleting way partly outside active area"
+	else:
+		testPass += 1
 	
 
 	#Upload objects with contraditory positions for a shared UUID node (allowed, silently fixed)
