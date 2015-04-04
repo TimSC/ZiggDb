@@ -470,6 +470,13 @@ if __name__ == "__main__":
 		testPass += 1
 
 	#Delete way partly within or outside active area (not allowed)
+	bbox = [-0.3, 51.12, -0.19, 51.17]
+	area = ziggDb.GetArea(bbox)
+	waysInside = zigg.FindPartlyOutside(area["ways"], bbox)
+	wayToDel = waysInside.keys()[0]
+	del area["ways"][wayToDel]
+	idChanges = ziggDb.SetArea(area, userInfo)
+	
 
 	#Upload objects with contraditory positions for a shared UUID node (allowed, silently fixed)
 
