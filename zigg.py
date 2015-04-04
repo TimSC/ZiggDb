@@ -480,7 +480,8 @@ class ZiggDb(object):
 						for pt in innerPoly:
 							if len(pt) != 3:
 								raise ValueError("Points should have 3 values")
-							outInnerPoly.append([self._ValidateLat(pt[0]), self._ValidateLon(pt[1]), self._ValidateUuid(pt[2])])
+							outInnerPoly.append([self._ValidateLat(pt[0]), self._ValidateLon(pt[1]), 
+								self._ValidateUuid(pt[2])])
 						innerOut.append(outInnerPoly)
 				
 				outShapeData.append([outerOut, innerOut])

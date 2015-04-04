@@ -382,29 +382,38 @@ if __name__ == "__main__":
 		testFail += 1
 
 	#Move point inside active area across internal tile boundary (allowed)
+	area = ziggDb.GetArea([tl[1]+0.0001, br[0]+0.0001, br[1]-0.0001, tl[0]-0.0001])
+	pt3 = (zigg.Interp(tl[0], br[0], 0.5), zigg.Interp(tl[1], br[1], 0.80))
 
+	wayToMod = area["ways"][newWayId]
+	objShapes, objTags = wayToMod
+	objShape = objShapes[0]
+	outer, inners = objShape
+
+	area["ways"][newWayId] = [[[[[pt2[0], pt2[1], outer[0][2]], [pt3[0], pt3[1], outer[1][2]]], None]], 
+		{'name': 'spanning road'}]
+
+	idChanges = ziggDb.SetArea(area, userInfo)
+
+	ok = True
+	area1 = ziggDb.GetArea([tl[1]+0.0001, br[0]+0.0001, mid[1]-0.0001, tl[0]-0.0001])
+	if newWayId not in area1["ways"]:
+		print "Way unexpectedly missing in tile"
+		ok = False
+
+	area2 = ziggDb.GetArea([mid[1]+0.0001, br[0]+0.0001, br[1]-0.0001, mid[0]-0.0001])
+	if newWayId in area2["ways"]:
+		print "Way unexpectedly present in tile"
+		ok = False
+
+	if ok:
+		testPass += 1
+	else:
+		testFail += 1
+	
 	#Add point to way that crosses repo boundary (allowed)
 
 	#Create a way across repo boundary (allowed)
-	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
-	userInfo = {}
-	newWay = [[[[[51.128, -0.271, -1], [51.127, -0.269, -2]], None]], {'name': 'old road'}]
-	area["ways"][-1] = newWay
-	idChanges = ziggDb.SetArea(area, userInfo)
-	zigg.ApplyIdChanges(area, idChanges)
-	wayId = idChanges["ways"].values()[0]
-	
-	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
-	wayData = area2["ways"][wayId]
-	#print area2["nodes"]
-	diffs = zigg.CompareAreas(area, area2)
-	ok = True
-	if len(diffs) > 0:
-		print "Unexpected differences discovered when adding node"
-		print diffs
-		ok = False
-	area = area2
-
 
 	#Modify way tags across repo boundary (allowed)
 
@@ -445,7 +454,8 @@ if __name__ == "__main__":
 	else:
 		testPass += 1
 
-	#Delete way within active area (allowed)	
+	#Delete way within active area (allowed)
+	
 
 	#Delete way partly within or outside active area (not allowed)
 
