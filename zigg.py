@@ -255,6 +255,7 @@ class ZiggDb(object):
 			repoData = config.repos[repoName]
 			repoZoom = repoData[1]
 			repoPath = repoData[4]
+			countTiles = 0
 			for x in range(repoData[2][0], repoData[3][0]):
 				for y in range(repoData[2][1], repoData[3][1]):
 					tl = slippy.num2deg(x, y, repoZoom)
@@ -270,6 +271,8 @@ class ZiggDb(object):
 					merged["nodes"].update(tileData["nodes"])
 					merged["ways"].update(tileData["ways"])
 					merged["areas"].update(tileData["areas"])
+					countTiles += 1
+
 
 		return merged
 

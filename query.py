@@ -283,8 +283,6 @@ if __name__ == "__main__":
 
 	bbox = [-0.3, 51.12, -0.19, 51.17]
 	area2 = ziggDb.GetArea(bbox)
-	#wayData = area2["ways"][wayId]
-	#print area2["nodes"]
 	diffs = zigg.CompareAreas(area, area2)
 	ok = True
 	if len(diffs) > 0:
@@ -337,14 +335,65 @@ if __name__ == "__main__":
 		testPass += 1
 	
 	#Create a way across internal tile boundary (allowed)
-	#print slippy.num2deg(2044, 1369, 12)
+	tl = slippy.num2deg(2044, 1369, 12)
+	mid = slippy.num2deg(2045, 1369, 12)
+	br = slippy.num2deg(2046, 1370, 12)
+	area = ziggDb.GetArea([tl[1]+0.0001, br[0]+0.0001, br[1]-0.0001, tl[0]-0.0001])
+	pt1 = (zigg.Interp(tl[0], br[0], 0.5), zigg.Interp(tl[1], br[1], 0.25))
+	pt2 = (zigg.Interp(tl[0], br[0], 0.5), zigg.Interp(tl[1], br[1], 0.75))
 
+	area["ways"][-1] = [[[[[pt1[0], pt1[1], -1], [pt2[0], pt2[1], -2]], None]], {'name': 'spanning road'}]
+	idChanges = ziggDb.SetArea(area, userInfo)
+	newWayId = idChanges["ways"].values()[0]
+	ok = True
+	area1 = ziggDb.GetArea([tl[1]+0.0001, br[0]+0.0001, mid[1]-0.0001, tl[0]-0.0001])
+	if newWayId not in area1["ways"]:
+		print "Expected way missing in tile"
+		ok = False
+	area2 = ziggDb.GetArea([mid[1]+0.0001, br[0]+0.0001, br[1]-0.0001, mid[0]-0.0001])
+	if newWayId not in area2["ways"]:
+		print "Expected way missing in tile"
+		ok = False
+
+	if ok:
+		testPass += 1
+	else:
+		testFail += 1
 
 	#Modify way tags across tile boundary (allowed)
 
 	#Move point inside active area across internal tile boundary (allowed)
 
-	#Add point to way that crosses internal tile boundary (allowed)
+	#Add point to way that crosses repo boundary (allowed)
+
+	#Create a way across repo boundary (allowed)
+	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	userInfo = {}
+	newWay = [[[[[51.128, -0.271, -1], [51.127, -0.269, -2]], None]], {'name': 'old road'}]
+	area["ways"][-1] = newWay
+	idChanges = ziggDb.SetArea(area, userInfo)
+	zigg.ApplyIdChanges(area, idChanges)
+	wayId = idChanges["ways"].values()[0]
+	
+	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	wayData = area2["ways"][wayId]
+	#print area2["nodes"]
+	diffs = zigg.CompareAreas(area, area2)
+	ok = True
+	if len(diffs) > 0:
+		print "Unexpected differences discovered when adding node"
+		print diffs
+		ok = False
+	area = area2
+
+
+	#Modify way tags across repo boundary (allowed)
+
+	#Move point inside active area across repo boundary (allowed)
+
+	#Add point to way that crosses repo boundary (allowed)
+
+
 
 	#Move a node in a way outside the active area (silently ignored)
 
