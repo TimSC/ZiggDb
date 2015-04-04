@@ -470,7 +470,7 @@ class ZiggDb(object):
 
 		return out
 
-	def SetArea(self, area, userInfo):
+	def SetArea(self, area, userInfo, debug = None):
 		#=Validate input=
 
 		#Get active area
@@ -584,17 +584,24 @@ class ZiggDb(object):
 				
 				if outside:
 					raise ValueError("Cannot add nodes outside active area")
+
+#		if debug is not None:
+#			print currentArea["ways"][debug]
 		
 		#No nodes within way/area should be removed if they are outside active area
 		for objType in currentArea:
 			if objType == "active": continue
 			existingObjDict = currentArea[objType]
+
+			#if debug is not None and objType == "ways":
+			#	print "test", existingObjDict[debug]
+
 			newObjDict = area[objType]
 			for objId in existingObjDict:
 				if objId not in newObjDict: continue
 				objDataExisting = existingObjDict[objId]
 				objDataNew = newObjDict[objId]
-				
+	
 				existingShapeData, existingTagData = objDataExisting
 				newShapeData, newTagData = objDataNew
 				for existingShape, newShape in zip(existingShapeData, newShapeData):
@@ -605,24 +612,29 @@ class ZiggDb(object):
 					#Check the nodes we expect in outer way
 					outerIds = set()
 					for pt in outer:
-						if not CheckPointInRect(pt, bbox): continue
+						if CheckPointInRect(pt, bbox): continue
 						outerIds.add(pt[2])
 
 					#Check expected nodes exist in new data
 					newIds = set([pt[2] for pt in newOuter])
-					print objId, len(outerIds), len(newIds)
 					for nid in outerIds:
 						if nid not in newIds:
 							raise ValueError("Cannot add nodes outside active area")
 
 					if inners is None: continue
-					for inner in inners:
+					for inner, newInner in zip(inners, newInners):
+						#Check the nodes we expect in inner way
 						innerIds = set()
 						for pt in inner:
 							if not CheckPointInRect(pt, bbox): continue
 							innerIds.add(pt[2])
-						#print "i", innerIds						
-		
+
+						#Check expected nodes exist in new data
+						newIds = set([pt[2] for pt in newInner])
+						for nid in innerIds:
+							if nid not in newIds:
+								raise ValueError("Cannot add nodes outside active area")
+			
 
 		#Shape changes are silently discarded if possible (otherwise we might be comparing floats)
 

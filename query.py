@@ -357,9 +357,7 @@ if __name__ == "__main__":
 	wayShape, wayTags = testWayData
 	wayPoly = wayShape[0]
 
-	print testWayUuid
 	outer, inners = wayPoly
-	print len(outer)
 
 	insidePts = []
 	for pt in outer:
@@ -368,11 +366,9 @@ if __name__ == "__main__":
 		insidePts.append(pt)
 	wayPoly[0] = insidePts
 
-	print len(insidePts)
-
 	ex = False
 	try:
-		idChanges = ziggDb.SetArea(area, userInfo)
+		idChanges = ziggDb.SetArea(area, userInfo, testWayUuid)
 	except ValueError:
 		ex = True
 	if not ex:
