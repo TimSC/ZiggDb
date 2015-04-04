@@ -424,7 +424,34 @@ if __name__ == "__main__":
 
 
 	#Move a node in a way outside the active area (silently ignored)
+	print ""
+	bbox = [-0.3, 51.12, -0.19, 51.17]
+	area = ziggDb.GetArea(bbox)
+	waysPartlyInside = zigg.FindPartlyOutside(area["ways"], bbox)
+	wayToModify = waysPartlyInside.keys()[0]
+	
+	wayObj = waysPartlyInside[wayToModify]
+	wayShape, wayTags = wayObj
+	wayPoly = wayShape[0]
+	outer, inners = wayPoly
+	nodeIndex = None
+	for nodeIndex, pt in enumerate(outer):
+		if zigg.CheckPointInRect(pt, bbox): continue
+		break
+	outer[nodeIndex][0] = 60.
+	outer[nodeIndex][1] = -10.
+	idChanges = ziggDb.SetArea(area, userInfo, wayToModify)
 
+	area = ziggDb.GetArea(bbox)
+	wayObj = area["ways"][wayToModify]
+	wayShape, wayTags = wayObj
+	wayPoly = wayShape[0]
+	outer, inners = wayPoly
+	if outer[nodeIndex][0] > 55. or outer[nodeIndex][0] < -5.:
+		print "Node in way updated even though it is outside active area"
+		testFail += 1
+	else:
+		testPass += 1
 	
 	#Add or remove nodes from a way that are outside the active area (not allowed)
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])

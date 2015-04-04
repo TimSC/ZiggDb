@@ -492,7 +492,7 @@ class ZiggDb(object):
 
 		return out
 
-	def SetArea(self, area, userInfo):
+	def SetArea(self, area, userInfo, debug = None):
 		#=Validate input=
 
 		#Get active area
@@ -555,6 +555,54 @@ class ZiggDb(object):
 			outer, inner = shapeData[0]
 			if inner is None:
 				raise ValueError("Areas must have list of inner polys (even if it is empty)")
+
+		#Rewrite nodes that are outside active area, so they are in their original positions
+		#Any modification of these are silently ignored
+		#First collect existing node positions
+		nodePosDict = {}
+		for objType in currentArea:
+			if objType == "active": continue
+			objDict = currentArea[objType]
+			for objId in objDict:
+				objData = objDict[objId]
+				objShapes, objTags = objData
+				for shape in objShapes:
+					outer, inners = shape
+					for pt in outer:
+						if CheckPointInRect(pt, bbox): continue
+						nodePosDict[pt[2]] = pt
+					if inners is None: continue
+					for inner in inners:
+						for pt in inner:
+							if CheckPointInRect(pt, bbox): continue
+							nodePosDict[pt[2]] = pt
+
+		#Update nodes outside active area to existing positions
+		for objType in newArea:
+			if objType == "active": continue
+			objDict = newArea[objType]
+			for objId in objDict:
+				changed = False
+				objData = objDict[objId]
+				objShapes, objTags = objData
+				for shape in objShapes:
+					outer, inners = shape
+					for i, pt in enumerate(outer):
+						if pt[2] in nodePosDict:
+							outer[i] = nodePosDict[pt[2]]
+							changed = True
+					if inners is None: continue
+					for inner in inners:
+						for i, pt in enumerate(inner):
+							if pt[2] in nodePosDict:
+								inner[i] = nodePosDict[pt[2]]
+								changed = True
+
+				#if changed:
+				#	print "changed", objData
+
+		#if debug in area["ways"]:
+		#	print area["ways"][debug]
 
 		#==All objects that are outside active area must exist in the input==
 		partlyOutsideWays = FindPartlyOutside(currentArea["ways"], bbox)
