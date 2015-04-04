@@ -455,7 +455,19 @@ if __name__ == "__main__":
 		testPass += 1
 
 	#Delete way within active area (allowed)
+	bbox = [-0.3, 51.12, -0.19, 51.17]
+	area = ziggDb.GetArea(bbox)
+	waysInside = zigg.FindEntirelyInside(area["ways"], bbox)
+	wayToDel = waysInside.keys()[0]
+	del area["ways"][wayToDel]
+	idChanges = ziggDb.SetArea(area, userInfo)
 	
+	area = ziggDb.GetArea(bbox)
+	if wayToDel in area["ways"]:
+		print "Way still present after being deleted"
+		testFail += 1
+	else:
+		testPass += 1
 
 	#Delete way partly within or outside active area (not allowed)
 
@@ -465,6 +477,10 @@ if __name__ == "__main__":
 	#Basic concept: The shapes of areas outside the active area is constant.
 	#Rationale: Shape many be moved into a different data tile; that would be complicated
 	
+	#==Version operations==
+	#Attempt to upload data based on out of date data
+	
+
 	print "Tests passed", testPass
 	print "Tests failed", testFail
 
