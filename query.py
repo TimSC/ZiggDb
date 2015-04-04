@@ -361,6 +361,25 @@ if __name__ == "__main__":
 		testFail += 1
 
 	#Modify way tags across tile boundary (allowed)
+	area1 = ziggDb.GetArea([tl[1]+0.0001, br[0]+0.0001, mid[1]-0.0001, tl[0]-0.0001])
+	area1["ways"][newWayId][1] = {'name': 'updated name'}
+	idChanges = ziggDb.SetArea(area1, userInfo)
+	ok = True
+	
+	area1 = ziggDb.GetArea([tl[1]+0.0001, br[0]+0.0001, mid[1]-0.0001, tl[0]-0.0001])
+	if area1["ways"][newWayId][1]["name"] != "updated name":
+		print "Tag did not update as expected (primary tile)"
+		ok = False
+
+	area2 = ziggDb.GetArea([mid[1]+0.0001, br[0]+0.0001, br[1]-0.0001, mid[0]-0.0001])
+	if area2["ways"][newWayId][1]["name"] != "updated name":
+		print "Tag did not update as expected (related tile)"
+		ok = False
+	
+	if ok:
+		testPass += 1
+	else:
+		testFail += 1
 
 	#Move point inside active area across internal tile boundary (allowed)
 
