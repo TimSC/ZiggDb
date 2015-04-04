@@ -276,54 +276,85 @@ class ZiggDb(object):
 
 		return merged
 
-	def _SetTilesInRepos(self, relevantRepos, area):
+	def _SetTilesInRepos(self, currentArea, area):
+		bbox = area["active"]
+		relevantRepos = self._FindRelevantRepos(bbox)
+
 		#Update tiles in relevant repos
 		bbox = area["active"]
 		for repoName in relevantRepos:
 			repoData = config.repos[repoName]
 			repoZoom = repoData[1]
 			repoPath = repoData[4]
+
+			tilesToUpdate = set()
+
+			#Get tiles in active area			
 			for x in range(repoData[2][0], repoData[3][0]):
 				for y in range(repoData[2][1], repoData[3][1]):
 					tl = slippy.num2deg(x, y, repoZoom)
 					br =  slippy.num2deg(x + 1, y + 1, repoZoom)
-					within = CheckRectOverlap([tl[1], br[0], br[1], tl[0]], bbox)
-					if not within: continue
+					touchesActive = CheckRectOverlap([tl[1], br[0], br[1], tl[0]], bbox)
 
-					tilePath = os.path.join(repoPath, str(x), str(y)+".dat")
-					if not os.path.exists(tilePath): continue
+					if not touchesActive: continue
+					tilesToUpdate.add((x, y))
 
-					tileData = cPickle.load(open(tilePath, "rt"))
+			#Get tiles that may be affected
+			for objType in currentArea:
+				if objType == "active": continue
+				objDict = currentArea[objType]
+				for objId in objDict:
+					pts = []
+					objData = objDict[objId]
+					objShapes, objTags = objData
+					for shape in objShapes:
+						outer, inners = shape
+						pts.extend(outer)
+						if inners is None: continue
+						for inner in inners:
+							pts.extend(outer)
 
-					#Remove existing objects that are entirely inside active area
-					tileData["nodes"] = FindPartlyOutside(tileData["nodes"], bbox)
-					tileData["ways"] = FindPartlyOutside(tileData["ways"], bbox)
-					tileData["areas"] = FindPartlyOutside(tileData["areas"], bbox)
+					for pt in pts:
+						tilexy = tuple(map(int, slippy.deg2num(pt[0], pt[1], repoZoom)))
+						tilesToUpdate.add(tilexy)
 
-					#Add new objects that are entirely inside active area
-					nodesInside = FindEntirelyInside(area["nodes"], bbox)
-					waysInside = FindEntirelyInside(area["ways"], bbox)
-					areasInside = FindEntirelyInside(area["areas"], bbox)
+			#Update tiles
+			for x, y in tilesToUpdate:
 
-					tileData["nodes"].update(nodesInside)
-					tileData["ways"].update(waysInside)
-					tileData["areas"].update(areasInside)
-				
-					#Update objects that are partially outside
-					for objId in area["nodes"]:
-						if objId in nodesInside: continue
-						tileData["nodes"][objId] = area["nodes"][objId]
+				tilePath = os.path.join(repoPath, str(x), str(y)+".dat")
+				if not os.path.exists(tilePath): continue
 
-					for objId in area["ways"]:
-						if objId in waysInside: continue
-						tileData["ways"][objId] = area["ways"][objId]
+				tileData = cPickle.load(open(tilePath, "rt"))
 
-					for objId in area["areas"]:
-						if objId in areasInside: continue
-						tileData["areas"][objId] = area["areas"][objId]
+				#Remove existing objects that are entirely inside active area
+				tileData["nodes"] = FindPartlyOutside(tileData["nodes"], bbox)
+				tileData["ways"] = FindPartlyOutside(tileData["ways"], bbox)
+				tileData["areas"] = FindPartlyOutside(tileData["areas"], bbox)
 
-					#Save result
-					cPickle.dump(tileData, open(tilePath, "wt"))
+				#Add new objects that are entirely inside active area
+				nodesInside = FindEntirelyInside(area["nodes"], bbox)
+				waysInside = FindEntirelyInside(area["ways"], bbox)
+				areasInside = FindEntirelyInside(area["areas"], bbox)
+
+				tileData["nodes"].update(nodesInside)
+				tileData["ways"].update(waysInside)
+				tileData["areas"].update(areasInside)
+			
+				#Update objects that are partially outside
+				for objId in area["nodes"]:
+					if objId in nodesInside: continue
+					tileData["nodes"][objId] = area["nodes"][objId]
+
+				for objId in area["ways"]:
+					if objId in waysInside: continue
+					tileData["ways"][objId] = area["ways"][objId]
+
+				for objId in area["areas"]:
+					if objId in areasInside: continue
+					tileData["areas"][objId] = area["areas"][objId]
+
+				#Save result
+				cPickle.dump(tileData, open(tilePath, "wt"))
 
 	def GetArea(self, bbox):
 		if len(bbox) != 4: 
@@ -473,7 +504,7 @@ class ZiggDb(object):
 
 		return out
 
-	def SetArea(self, area, userInfo, debug = None):
+	def SetArea(self, area, userInfo):
 		#=Validate input=
 
 		#Get active area
@@ -587,17 +618,11 @@ class ZiggDb(object):
 				
 				if outside:
 					raise ValueError("Cannot add nodes outside active area")
-
-#		if debug is not None:
-#			print currentArea["ways"][debug]
 		
 		#No nodes within way/area should be removed if they are outside active area
 		for objType in currentArea:
 			if objType == "active": continue
 			existingObjDict = currentArea[objType]
-
-			#if debug is not None and objType == "ways":
-			#	print "test", existingObjDict[debug]
 
 			newObjDict = area[objType]
 			for objId in existingObjDict:
@@ -656,8 +681,7 @@ class ZiggDb(object):
 		#If we have reached here, we are ready to update the working copy
 
 		#print "Updating working copy"
-		relevantRepos = self._FindRelevantRepos(bbox)
-		self._SetTilesInRepos(relevantRepos, newArea)
+		self._SetTilesInRepos(currentArea, newArea)
 		
 		
 		

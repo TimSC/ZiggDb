@@ -436,7 +436,7 @@ if __name__ == "__main__":
 
 	ex = False
 	try:
-		idChanges = ziggDb.SetArea(area, userInfo, testWayUuid)
+		idChanges = ziggDb.SetArea(area, userInfo)
 	except ValueError:
 		ex = True
 	if not ex:
