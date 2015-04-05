@@ -585,6 +585,38 @@ if __name__ == "__main__":
 	else:
 		testPass += 1
 
+	#Create area with inner way
+	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	userInfo = {}
+	a, b = 51.0767134647, 1.186346014
+	clat, clon = 51.15, -0.25
+
+	newArea = [[[[[51.0768857186-a+clat, 1.1862078673-b+clon, -1], 
+		[51.0766380201-a+clat, 1.1861000067-b+clon, -2], 
+		[51.0765281911-a+clat, 1.1865016947-b+clon, -3], 
+		[51.0767548592-a+clat, 1.1865872393-b+clon, -4]], 
+		[[[51.0767852373-a+clat, 1.1862859733-b+clon, -5], 
+		[51.0767385017-a+clat, 1.1864421853-b+clon, -6], 
+		[51.0766637247-a+clat, 1.1862971313-b+clon, -7]]]]], {'name': 'doughnut'}]
+	area["areas"][-1] = newArea
+	idChanges = ziggDb.SetArea(area, userInfo)
+	zigg.ApplyIdChanges(area, idChanges)
+	areaId = idChanges["areas"].values()[0]
+	
+	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	areaData = area2["areas"][areaId]
+	diffs = zigg.CompareAreas(area, area2)
+	ok = True
+	if len(diffs) > 0:
+		print "Unexpected differences discovered when adding area with inner hole"
+		print diffs
+		ok = False
+	if ok:
+		testPass += 1
+	else:
+		testFail += 1
+	area = area2
+
 	#==Version operations==
 	#Attempt to upload data based on out of date
 	
