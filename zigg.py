@@ -1,4 +1,4 @@
-import cPickle, uuid, slippy, os
+import cPickle, uuid, slippy, os, copy
 
 def CheckRectOverlap(rect1, rect2):
 	#left,bottom,right,top
@@ -235,14 +235,20 @@ class ZiggDb(object):
 				relevantRepos.append(repoName)
 		return relevantRepos
 
-	def _GetTilesFromRepos(self, relevantRepos, bbox):
+	def _GetTilesFromRepos(self, bbox):
+
+		relevantRepos = self._FindRelevantRepos(bbox)
+
 		#Get tiles from relevant repos
 		merged = {"nodes": {}, "ways": {}, "areas": {}, "active": bbox[:]}
+		versionInfo = {}
+
 		for repoName in relevantRepos:
 			repoData = self.repos[repoName]
 			repoZoom = repoData[1]
 			repoPath = repoData[4]
 			countTiles = 0
+			tileVersions = {}
 			for x in range(repoData[2][0], repoData[3][0]):
 				for y in range(repoData[2][1], repoData[3][1]):
 					tl = slippy.num2deg(x, y, repoZoom)
@@ -260,8 +266,14 @@ class ZiggDb(object):
 					merged["areas"].update(tileData["areas"])
 					countTiles += 1
 
+					if "version" in tileData:
+						tileVersions[(x, y)] = tileData["version"]
+					else:
+						tileVersions[(x, y)] = 1
 
-		return merged
+			versionInfo[repoName] = tileVersions
+
+		return merged, versionInfo
 
 	def _SetTilesInRepos(self, currentArea, area):
 		bbox = area["active"]
@@ -289,6 +301,7 @@ class ZiggDb(object):
 			#Get tiles that may be affected
 			for objType in currentArea:
 				if objType == "active": continue
+				if objType == "versionInfo": continue
 				objDict = currentArea[objType]
 				for objId in objDict:
 					pts = []
@@ -312,6 +325,10 @@ class ZiggDb(object):
 				if not os.path.exists(tilePath): continue
 
 				tileData = cPickle.load(open(tilePath, "rt"))
+				if "version" in tileData:
+					tileVersion = tileData["version"]
+				else:
+					tileVersion = 1
 
 				#Remove existing objects that are entirely inside active area
 				tileData["nodes"] = FindPartlyOutside(tileData["nodes"], bbox)
@@ -340,6 +357,9 @@ class ZiggDb(object):
 					if objId in areasInside: continue
 					tileData["areas"][objId] = area["areas"][objId]
 
+				#Increment version
+				tileData["version"] = tileVersion + 1
+
 				#Save result
 				cPickle.dump(tileData, open(tilePath, "wt"))
 
@@ -348,13 +368,13 @@ class ZiggDb(object):
 			raise ValueError("bbox should have 4 values")
 		bbox = map(float, bbox)
 
-		relevantRepos = self._FindRelevantRepos(bbox)
-		merged = self._GetTilesFromRepos(relevantRepos, bbox)
+		merged, versionInfo = self._GetTilesFromRepos(bbox)
 
 		#Trim objects that are not in the requested bbox at all
 		merged["nodes"] = Trim(merged["nodes"], bbox)
 		merged["ways"] = Trim(merged["ways"], bbox)
 		merged["areas"] = Trim(merged["areas"], bbox)
+		merged["versionInfo"] = versionInfo
 
 		return merged
 
@@ -509,6 +529,10 @@ class ZiggDb(object):
 		newArea["ways"] = self._RewriteInput(area["ways"])
 		newArea["areas"] = self._RewriteInput(area["areas"])
 
+		#Check version info
+		if area["versionInfo"] != currentArea["versionInfo"]:
+			raise ValueError("Version info does not match")
+		
 		#Check no UUIDs have been invented by the client
 		self._CheckUuidsAlreadyExist(newArea["nodes"], currentArea["nodes"])
 		self._CheckUuidsAlreadyExist(newArea["ways"], currentArea["ways"])
@@ -563,6 +587,7 @@ class ZiggDb(object):
 		nodePosOutsideDict = {}
 		for objType in currentArea:
 			if objType == "active": continue
+			if objType == "versionInfo": continue
 			objDict = currentArea[objType]
 
 			for objId in objDict:
@@ -586,6 +611,7 @@ class ZiggDb(object):
 		#Gather node positions within active area
 		for objType in newArea:
 			if objType == "active": continue
+			if objType == "versionInfo": continue
 			objDict = newArea[objType]
 
 			for objId in objDict:
@@ -608,6 +634,7 @@ class ZiggDb(object):
 		#Update nodes to consistent positions
 		for objType in newArea:
 			if objType == "active": continue
+			if objType == "versionInfo": continue
 			objDict = newArea[objType]
 			for objId in objDict:
 				objData = objDict[objId]
@@ -682,6 +709,7 @@ class ZiggDb(object):
 		#No nodes within way/area should be removed if they are outside active area
 		for objType in currentArea:
 			if objType == "active": continue
+			if objType == "versionInfo": continue
 			existingObjDict = currentArea[objType]
 
 			newObjDict = area[objType]
