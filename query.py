@@ -243,7 +243,7 @@ if __name__ == "__main__":
 	diffs = zigg.CompareAreas(area, area2)
 	ok = True
 	if len(diffs) > 0:
-		print "Unexpected differences discovered when adding node"
+		print "Unexpected differences discovered when adding way"
 		print diffs
 		ok = False
 	area = area2
@@ -535,6 +535,36 @@ if __name__ == "__main__":
 	#Basic concept: The shapes of areas outside the active area is constant.
 	#Rationale: Shape many be moved into a different data tile; that would be complicated
 	
+	#Create an area in active area
+	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	userInfo = {}
+	newArea = [[[[[51.128, -0.271, -1], [51.127, -0.269, -2], [51.1275, -0.272, -3]], []]], {'name': 'lake'}]
+	area["areas"][-1] = newArea
+	idChanges = ziggDb.SetArea(area, userInfo)
+	zigg.ApplyIdChanges(area, idChanges)
+	areaId = idChanges["areas"].values()[0]
+	
+	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	areaData = area2["areas"][areaId]
+	#print area2["nodes"]
+	diffs = zigg.CompareAreas(area, area2)
+	ok = True
+	if len(diffs) > 0:
+		print "Unexpected differences discovered when adding area"
+		print diffs
+		ok = False
+	if ok:
+		testPass += 1
+	else:
+		testFail += 1
+	area = area2
+
+	#Modify an area in active area
+
+	#Delete area in active area
+
+	
+
 	#==Version operations==
 	#Attempt to upload data based on out of date data
 	
