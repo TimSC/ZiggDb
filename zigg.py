@@ -1,4 +1,4 @@
-import cPickle, uuid, config, slippy, os
+import cPickle, uuid, slippy, os
 
 def CheckRectOverlap(rect1, rect2):
 	#left,bottom,right,top
@@ -174,13 +174,13 @@ def ApplyIdChanges(area, idChanges):
 
 class ZiggDb(object):
 	
-	def __init__(self):
-		pass
+	def __init__(self, repos):
+		self.repos = repos
 
 	def GenerateTestData(self):
 
-		for repoName in config.repos:
-			repoData = config.repos[repoName]
+		for repoName in self.repos:
+			repoData = self.repos[repoName]
 			repoZoom = repoData[1]
 			repoPath = repoData[4]
 
@@ -224,8 +224,8 @@ class ZiggDb(object):
 	def _FindRelevantRepos(self, bbox):
 		#Find relevant repos
 		relevantRepos = []
-		for repoName in config.repos:
-			repoData = config.repos[repoName]
+		for repoName in self.repos:
+			repoData = self.repos[repoName]
 			repoZoom = repoData[1]
 			tl = slippy.num2deg(repoData[2][0], repoData[2][1], repoZoom)
 			br =  slippy.num2deg(repoData[3][0], repoData[3][1], repoZoom)
@@ -239,7 +239,7 @@ class ZiggDb(object):
 		#Get tiles from relevant repos
 		merged = {"nodes": {}, "ways": {}, "areas": {}, "active": bbox[:]}
 		for repoName in relevantRepos:
-			repoData = config.repos[repoName]
+			repoData = self.repos[repoName]
 			repoZoom = repoData[1]
 			repoPath = repoData[4]
 			countTiles = 0
@@ -270,7 +270,7 @@ class ZiggDb(object):
 		#Update tiles in relevant repos
 		bbox = area["active"]
 		for repoName in relevantRepos:
-			repoData = config.repos[repoName]
+			repoData = self.repos[repoName]
 			repoZoom = repoData[1]
 			repoPath = repoData[4]
 
@@ -723,9 +723,6 @@ class ZiggDb(object):
 							if nid not in newIds:
 								raise ValueError("Cannot add nodes outside active area")
 			
-
-		#Shape changes are silently discarded if possible (otherwise we might be comparing floats)
-
 		#=Prepare for update=
 
 		#Number new objects
@@ -733,9 +730,6 @@ class ZiggDb(object):
 		self._NumberNewObjects(newArea["nodes"], "node", changes)
 		self._NumberNewObjects(newArea["ways"], "way", changes)
 		self._NumberNewObjects(newArea["areas"] , "area", changes)
-
-		#Detemine outer bounding box for all objects, including those partially inside
-		
 
 		#=Update working copy=
 		#If we have reached here, we are ready to update the working copy

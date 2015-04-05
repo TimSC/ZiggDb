@@ -1,14 +1,14 @@
 
 
 import zigg
-import bz2, cPickle, uuid, slippy
+import bz2, cPickle, uuid, slippy, config
 
 if __name__ == "__main__":
 	testPass = 0
 	testFail = 0
 	testWarning = 0
 
-	ziggDb = zigg.ZiggDb()
+	ziggDb = zigg.ZiggDb(config.repos)
 
 	ziggDb.GenerateTestData()
 
@@ -586,7 +586,7 @@ if __name__ == "__main__":
 		testPass += 1
 
 	#==Version operations==
-	#Attempt to upload data based on out of date data
+	#Attempt to upload data based on out of date
 	
 
 	print "Tests passed", testPass
