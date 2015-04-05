@@ -566,7 +566,13 @@ if __name__ == "__main__":
 
 	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 	areaData = area2["areas"][areaId]
-	print areaData
+	objShape, objTags = areaData
+	if objTags["name"] != "wood":
+		testFail += 1
+	else:
+		testPass += 1
+
+		
 
 
 	#Delete area in active area
