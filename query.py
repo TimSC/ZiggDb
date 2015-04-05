@@ -501,6 +501,7 @@ if __name__ == "__main__":
 	waysInside = zigg.FindPartlyOutside(area["ways"], bbox)
 	wayToDel = waysInside.keys()[0]
 	del area["ways"][wayToDel]
+	ex = False
 	try:
 		idChanges = ziggDb.SetArea(area, userInfo)
 	except ValueError:
@@ -619,7 +620,27 @@ if __name__ == "__main__":
 
 	#==Version operations==
 	#Attempt to upload data based on out of date
-	
+	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	userInfo = {}
+	newNode = [[[[[51.129, -0.272, -1]], None]], {'name': 'another place'}]
+	area["nodes"][-1] = newNode
+	#print area["nodes"]
+	idChanges = ziggDb.SetArea(area, userInfo)
+	zigg.ApplyIdChanges(area, idChanges)
+	nodeId = idChanges["nodes"].values()[0]
+
+	newNode = [[[[[51.1297, -0.2723, -1]], None]], {'name': 'alternate place'}]
+	area["nodes"][-1] = newNode
+	ex = False
+	try:
+		idChanges = ziggDb.SetArea(area, userInfo)
+	except ValueError:
+		ex = True
+	if not ex:
+		testFail += 1
+		print "Unexpected lack of exception when uploading data with the wrong version number"
+	else:
+		testPass += 1
 
 	print "Tests passed", testPass
 	print "Tests failed", testFail
