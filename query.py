@@ -568,16 +568,22 @@ if __name__ == "__main__":
 	areaData = area2["areas"][areaId]
 	objShape, objTags = areaData
 	if objTags["name"] != "wood":
+		print "Wrong tag after area modified"
 		testFail += 1
 	else:
 		testPass += 1
 
-		
-
-
 	#Delete area in active area
+	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	del area["areas"][areaId]
+	idChanges = ziggDb.SetArea(area, userInfo)
 
-	
+	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	if areaId in area2["areas"]:
+		print "Failed to delete area"
+		testFail += 1
+	else:
+		testPass += 1
 
 	#==Version operations==
 	#Attempt to upload data based on out of date data
