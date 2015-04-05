@@ -559,7 +559,15 @@ if __name__ == "__main__":
 		testFail += 1
 	area = area2
 
-	#Modify an area in active area
+	#Modify tag for an area in active area
+	newArea = [[[[[51.128, -0.271, -1], [51.127, -0.269, -2], [51.1275, -0.272, -3]], []]], {'name': 'wood'}]
+	area["areas"][areaId] = newArea
+	idChanges = ziggDb.SetArea(area, userInfo)
+
+	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	areaData = area2["areas"][areaId]
+	print areaData
+
 
 	#Delete area in active area
 
