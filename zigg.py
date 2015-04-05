@@ -558,51 +558,75 @@ class ZiggDb(object):
 
 		#Rewrite nodes that are outside active area, so they are in their original positions
 		#Any modification of these are silently ignored
-		#First collect existing node positions
-		nodePosDict = {}
+		#First collect existing node positions outside active area
+		nodePosInsideDict = {}
+		nodePosOutsideDict = {}
 		for objType in currentArea:
 			if objType == "active": continue
 			objDict = currentArea[objType]
+
 			for objId in objDict:
 				objData = objDict[objId]
 				objShapes, objTags = objData
 				for shape in objShapes:
 					outer, inners = shape
 					for pt in outer:
-						if CheckPointInRect(pt, bbox): continue
-						nodePosDict[pt[2]] = pt
+
+						if not CheckPointInRect(pt, bbox):
+							if pt[2] not in nodePosOutsideDict:
+								nodePosOutsideDict[pt[2]] = pt
+
 					if inners is None: continue
 					for inner in inners:
 						for pt in inner:
-							if CheckPointInRect(pt, bbox): continue
-							nodePosDict[pt[2]] = pt
+							if not CheckPointInRect(pt, bbox):
+								if pt[2] not in nodePosOutsideDict:
+									nodePosOutsideDict[pt[2]] = pt
 
-		#Update nodes outside active area to existing positions
+		#Gather node positions within active area
 		for objType in newArea:
 			if objType == "active": continue
 			objDict = newArea[objType]
+
 			for objId in objDict:
-				changed = False
 				objData = objDict[objId]
 				objShapes, objTags = objData
 				for shape in objShapes:
 					outer, inners = shape
-					for i, pt in enumerate(outer):
-						if pt[2] in nodePosDict:
-							outer[i] = nodePosDict[pt[2]]
-							changed = True
+					for pt in outer:
+						if CheckPointInRect(pt, bbox):
+							if pt[2] not in nodePosInsideDict:
+								nodePosInsideDict[pt[2]] = pt
+
 					if inners is None: continue
 					for inner in inners:
-						for i, pt in enumerate(inner):
-							if pt[2] in nodePosDict:
-								inner[i] = nodePosDict[pt[2]]
-								changed = True
+						for pt in inner:
+							if CheckPointInRect(pt, bbox):
+								if pt[2] not in nodePosInsideDict:
+									nodePosInsideDict[pt[2]] = pt
 
-				#if changed:
-				#	print "changed", objData
+		#Update nodes to consistent positions
+		for objType in newArea:
+			if objType == "active": continue
+			objDict = newArea[objType]
+			for objId in objDict:
+				objData = objDict[objId]
+				objShapes, objTags = objData
+				for shape in objShapes:
 
-		#if debug in area["ways"]:
-		#	print area["ways"][debug]
+					outer, inners = shape
+					for i, pt in enumerate(outer):
+						if pt[2] in nodePosOutsideDict:
+							outer[i] = nodePosOutsideDict[pt[2]]
+						if pt[2] in nodePosInsideDict:
+							outer[i] = nodePosInsideDict[pt[2]]
+					if inners is not None:
+						for inner in inners:
+							for i, pt in enumerate(inner):
+								if pt[2] in nodePosOutsideDict:
+									inner[i] = nodePosOutsideDict[pt[2]]
+								if pt[2] in nodePosInsideDict:
+									inner[i] = nodePosInsideDict[pt[2]]
 
 		#==All objects that are outside active area must exist in the input==
 		partlyOutsideWays = FindPartlyOutside(currentArea["ways"], bbox)

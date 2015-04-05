@@ -424,7 +424,6 @@ if __name__ == "__main__":
 
 
 	#Move a node in a way outside the active area (silently ignored)
-	print ""
 	bbox = [-0.3, 51.12, -0.19, 51.17]
 	area = ziggDb.GetArea(bbox)
 	waysPartlyInside = zigg.FindPartlyOutside(area["ways"], bbox)
@@ -440,7 +439,7 @@ if __name__ == "__main__":
 		break
 	outer[nodeIndex][0] = 60.
 	outer[nodeIndex][1] = -10.
-	idChanges = ziggDb.SetArea(area, userInfo, wayToModify)
+	idChanges = ziggDb.SetArea(area, userInfo)
 
 	area = ziggDb.GetArea(bbox)
 	wayObj = area["ways"][wayToModify]
@@ -512,8 +511,25 @@ if __name__ == "__main__":
 	else:
 		testPass += 1
 	
-
-	#Upload objects with contraditory positions for a shared UUID node (allowed, silently fixed)
+	#Upload new objects with contraditory positions for a shared UUID node (allowed, silently fixed)
+	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	userInfo = {}
+	newWay = [[[[[51.128, -0.271, -1], [51.127, -0.269, -1]], None]], {'name': 'condtradictory positions'}]
+	area["ways"][-1] = newWay
+	idChanges = ziggDb.SetArea(area, userInfo, -1)
+	zigg.ApplyIdChanges(area, idChanges)
+	wayId = idChanges["ways"].values()[0]
+	
+	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	wayData = area2["ways"][wayId]
+	wayShape, wayTags = wayData
+	wayPoly = wayShape[0]
+	outer, inners = wayPoly
+	if outer[0] != outer[1]:
+		testFail += 1
+		print "Points with IDs should have the same position"
+	else:
+		testPass += 1
 
 	#==Area operations==
 	#Basic concept: The shapes of areas outside the active area is constant.
