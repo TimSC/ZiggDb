@@ -1,14 +1,14 @@
 
 
 import zigg
-import bz2, cPickle, uuid, slippy, config
+import bz2, cPickle, uuid, slippy, config, os
 
 if __name__ == "__main__":
 	testPass = 0
 	testFail = 0
 	testWarning = 0
 
-	ziggDb = zigg.ZiggDb(config.repos)
+	ziggDb = zigg.ZiggDb(config.repos, os.path.dirname(__file__))
 
 	ziggDb.GenerateTestData()
 

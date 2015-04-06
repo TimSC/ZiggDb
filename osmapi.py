@@ -6,11 +6,11 @@
 import web, os, sys, datetime, json, math
 sys.path.append(os.path.dirname(__file__))
 import StringIO
-#import conf
+import config, zigg
 from jinja2 import Environment, FileSystemLoader
 from xml.sax.saxutils import escape
 
-class Api(object):
+class ApiMap(object):
 	def GET(self):
 		return self.Render()
 
@@ -19,14 +19,18 @@ class Api(object):
 
 	def Render(self):
 		webInput = web.input()
-		#dataDb = web.ctx.dataDb
+		ziggDb = web.ctx.ziggDb
+
+		bbox = map(float, webInput["bbox"].split(","))
+		area = ziggDb.GetArea(bbox)
 
 		
-		web.header('Content-Type', 'text/plain')
-		return "Unknown action"
+
+		web.header('Content-Type', 'text/xml')
+		return "<osm></osm>"
 
 urls = (
-	'/api', 'Api',
+	'/api/0.6/map', 'ApiMap',
 	)
 
 def RenderTemplate(template_name, **context):
@@ -47,6 +51,7 @@ def InitDatabaseConn():
 	curdir = os.path.dirname(__file__)
 	#web.ctx.dataDb = web.database(dbn='sqlite', db=os.path.join(curdir, 'data.db'))
 	#web.ctx.users = web.database(dbn='sqlite', db=os.path.join(curdir, 'users.db'))
+	web.ctx.ziggDb = zigg.ZiggDb(config.repos, os.path.dirname(__file__))
 	web.ctx.session = session
 
 web.config.debug = 1

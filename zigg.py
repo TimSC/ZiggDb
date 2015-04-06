@@ -174,8 +174,9 @@ def ApplyIdChanges(area, idChanges):
 
 class ZiggDb(object):
 	
-	def __init__(self, repos):
+	def __init__(self, repos, basePath):
 		self.repos = repos
+		self.basePath = basePath
 
 	def GenerateTestData(self):
 
@@ -186,13 +187,13 @@ class ZiggDb(object):
 
 			for x in range(repoData[2][0], repoData[3][0]):
 
-				colPath = os.path.join(repoPath, str(x))
+				colPath = os.path.join(self.basePath, repoPath, str(x))
 				if not os.path.exists(colPath):
 					os.mkdir(colPath)
 
 				for y in range(repoData[2][1], repoData[3][1]):
 					
-					tilePath = os.path.join(repoPath, str(x), str(y)+".dat")
+					tilePath = os.path.join(self.basePath, repoPath, str(x), str(y)+".dat")
 					#if os.path.exists(tilePath): continue
 
 					tl = slippy.num2deg(x, y, repoZoom)
@@ -256,7 +257,7 @@ class ZiggDb(object):
 					within = CheckRectOverlap([tl[1], br[0], br[1], tl[0]], bbox)
 					if not within: continue
 
-					tilePath = os.path.join(repoPath, str(x), str(y)+".dat")
+					tilePath = os.path.join(self.basePath, repoPath, str(x), str(y)+".dat")
 					if not os.path.exists(tilePath): continue
 
 					tileData = cPickle.load(open(tilePath, "rt"))
@@ -321,7 +322,7 @@ class ZiggDb(object):
 			#Update tiles
 			for x, y in tilesToUpdate:
 
-				tilePath = os.path.join(repoPath, str(x), str(y)+".dat")
+				tilePath = os.path.join(self.basePath, repoPath, str(x), str(y)+".dat")
 				if not os.path.exists(tilePath): continue
 
 				tileData = cPickle.load(open(tilePath, "rt"))
