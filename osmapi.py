@@ -194,8 +194,43 @@ class ApiBase(object):
 		web.header('Content-Type', 'text/plain')
 		return "Base url for API"
 
+class ApiCapabilities(object):
+	def GET(self):
+		return self.Render()
+
+	def POST(self):
+		return self.Render()
+
+	def Render(self):
+		web.header('Content-Type', 'text/xml')
+		out = []
+
+		out.append(u'<?xml version="1.0" encoding="UTF-8"?>')
+		out.append(u'<osm version="0.6" generator="ZiggDb" copyright="TBD" attribution="TBD" license="TBD">')
+		out.append(u'  <api>')
+		out.append(u'    <version minimum="0.6" maximum="0.6"/>')
+		out.append(u'    <area maximum="0.25"/>')
+		out.append(u'    <tracepoints per_page="5000"/>')
+		out.append(u'    <waynodes maximum="2000"/>')
+		out.append(u'    <changesets maximum_elements="50000"/>')
+		out.append(u'    <timeout seconds="300"/>')
+		out.append(u'    <status database="online" api="online" gpx="online"/>')
+		out.append(u'  </api>')
+		out.append(u'  <policy>')
+		out.append(u'    <imagery>')
+		out.append(u'      <blacklist regex=".*\.googleapis\.com/.*"/>')
+		out.append(u'      <blacklist regex=".*\.google\.com/.*"/>')
+		out.append(u'      <blacklist regex=".*\.google\.ru/.*"/>')
+		out.append(u'    </imagery>')
+		out.append(u'  </policy>')
+		out.append(u'</osm>')
+
+		return "".join(out).encode("utf-8")
+
 urls = (
 	'/api/0.6/map', 'ApiMap',
+	'/api/capabilities', 'ApiCapabilities',
+	'/api/0.6/capabilities', 'ApiCapabilities',
 	'/', 'ApiBase'
 	)
 
