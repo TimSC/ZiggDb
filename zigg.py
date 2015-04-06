@@ -752,6 +752,27 @@ class ZiggDb(object):
 							if nid not in newIds:
 								raise ValueError("Cannot add nodes outside active area")
 			
+		#Ways must have at least one node
+		for objId in newArea["ways"]:
+			objData = newArea["ways"][objId]
+			shapeData, tagData = objData
+			for shape in shapeData:
+				outer, inners = shape
+				if len(outer) < 1:
+					raise ValueError("Way must have at least one node")
+
+		#Areas must have at least three nodes in outer way, inner nodes have at least three nodes
+		for objId in newArea["areas"]:
+			objData = newArea["areas"][objId]
+			shapeData, tagData = objData
+			for shape in shapeData:
+				outer, inners = shape
+				if len(outer) < 1:
+					raise ValueError("Areas must have at least one node in outer way")
+				for inner in inners:
+					if len(inner) < 1:
+						raise ValueError("Areas must have at least one node in inner way")
+
 		#=Prepare for update=
 
 		#Number new objects
