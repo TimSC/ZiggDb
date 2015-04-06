@@ -30,17 +30,79 @@ class ApiMap(object):
   		out.append(u"<bounds minlat='{0}' minlon='{1}' maxlat='{2}' maxlon='{3}' origin='ZiggDb' />".format(
 			bbox[1], bbox[0], bbox[3], bbox[2]))
 
+		nodeIdMap = {}
+		nodeUuidMap = {}
+
+		#Write individual nodes to output
 		for nodeId in area["nodes"]:
 			objShapes, objData = area["nodes"][nodeId]
 			shape = objShapes[0]
 			outer, inners = shape
 			pt = outer[0]
+			nodeIdMap[idCount["node"]] = nodeId
+			nodeUuidMap[nodeId] = idCount["node"]
 
 			out.append(u"<node id='{0}' timestamp='2006-11-30T00:03:33Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' lat='{1}' lon='{2}'>\n".format(idCount["node"], pt[0], pt[1]))
 			idCount["node"] += 1
 			for key in objData:
 				out.append(u"  <tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
 			out.append(u"</node>\n")
+
+		#Write nodes that are part of other objects
+		for objType in ["ways", "areas"]:
+			objDict = area[objType]
+			for objId in objDict:
+				objShapes, objData = objDict[objId]
+				shape = objShapes[0]
+				outer, inners = shape
+				for pt in outer:
+					if pt[2] in nodeUuidMap: continue #Already written to output
+
+					nodeIdMap[idCount["node"]] = pt[2]
+					nodeUuidMap[pt[2]] = idCount["node"]
+
+					out.append(u"<node id='{0}' timestamp='2006-11-30T00:03:33Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' lat='{1}' lon='{2}'>\n".format(idCount["node"], pt[0], pt[1]))
+					idCount["node"] += 1
+					out.append(u"</node>\n")
+
+		#Write ways
+		for objType in ["ways"]:
+			objDict = area[objType]
+			for objId in objDict:
+				objShapes, objData = objDict[objId]
+				shape = objShapes[0]
+				outer, inners = shape
+
+				out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(idCount["way"]))
+				idCount["way"] += 1
+				for pt in outer:
+					nid = nodeUuidMap[pt[2]]
+					out.append(u"<nd ref='{0}' />\n".format(nid))
+				for key in objData:
+					out.append(u"<tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
+				out.append(u"</way>\n")
+
+		#Write outer ways for areas
+		for objType in ["areas"]:
+			objDict = area[objType]
+			for objId in objDict:
+				objShapes, objData = objDict[objId]
+				shape = objShapes[0]
+				outer, inners = shape
+
+				out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(idCount["way"]))
+				idCount["way"] += 1
+				for pt in outer:
+					nid = nodeUuidMap[pt[2]]
+					out.append(u"<nd ref='{0}' />\n".format(nid))
+
+				#Close area
+				nid = nodeUuidMap[outer[0][2]]
+				out.append(u"<nd ref='{0}' />\n".format(nid))
+
+				out.append(u"</way>\n")
+
+		#TODO finish area code
 
 		out.append(u"</osm>\n")
 
