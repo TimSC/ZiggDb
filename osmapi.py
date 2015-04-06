@@ -65,6 +65,19 @@ class ApiMap(object):
 					idCount["node"] += 1
 					out.append(u"</node>\n")
 
+				if inners is None: continue
+				for inner in inners:
+					for pt in inner:
+						if pt[2] in nodeUuidMap: continue #Already written to output
+
+						nodeIdMap[idCount["node"]] = pt[2]
+						nodeUuidMap[pt[2]] = idCount["node"]
+
+						out.append(u"<node id='{0}' timestamp='2006-11-30T00:03:33Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' lat='{1}' lon='{2}'>\n".format(idCount["node"], pt[0], pt[1]))
+						idCount["node"] += 1
+						out.append(u"</node>\n")
+
+
 		#Write ways
 		for objType in ["ways"]:
 			objDict = area[objType]
@@ -82,35 +95,108 @@ class ApiMap(object):
 					out.append(u"<tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
 				out.append(u"</way>\n")
 
-		#Write outer ways for areas
+		areaIdMap = {}
+		areaUuidMap = {}
+
+		#Write way for areas if no inner ways are present
 		for objType in ["areas"]:
 			objDict = area[objType]
 			for objId in objDict:
 				objShapes, objData = objDict[objId]
 				shape = objShapes[0]
 				outer, inners = shape
+				if len(inners) != 0: continue
 
+				#Write outer way
 				out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(idCount["way"]))
 				idCount["way"] += 1
 				for pt in outer:
 					nid = nodeUuidMap[pt[2]]
 					out.append(u"<nd ref='{0}' />\n".format(nid))
-
-				#Close area
-				nid = nodeUuidMap[outer[0][2]]
+				nid = nodeUuidMap[outer[0][2]] #Close area
 				out.append(u"<nd ref='{0}' />\n".format(nid))
-
+				out.append(u"  <tag k='area' v='yes' />\n")
+				for key in objData:
+					out.append(u"  <tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
 				out.append(u"</way>\n")
 
-		#TODO finish area code
+		#Write ways for areas if inner ways are present
+		for objType in ["areas"]:
+			objDict = area[objType]
+			for objId in objDict:
+				objShapes, objData = objDict[objId]
+				shape = objShapes[0]
+				outer, inners = shape
+				if len(inners) == 0: continue
+
+				#Write outer way
+				out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(idCount["way"]))
+				wayOuterId = idCount["way"]
+				idCount["way"] += 1
+				for pt in outer:
+					nid = nodeUuidMap[pt[2]]
+					out.append(u"<nd ref='{0}' />\n".format(nid))
+				nid = nodeUuidMap[outer[0][2]] #Close area
+				out.append(u"<nd ref='{0}' />\n".format(nid))
+				out.append(u"</way>\n")
+
+				#Writer inner ways
+				wayInnersIds = []
+				if inners is not None:
+					for inner in inners:
+						out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' inner='1'>\n".format(idCount["way"]))
+						wayInnersIds.append(idCount["way"])
+						idCount["way"] += 1
+						for pt in inner:
+							nid = nodeUuidMap[pt[2]]
+							out.append(u"<nd ref='{0}' />\n".format(nid))
+						nid = nodeUuidMap[inner[0][2]] #Close area
+						out.append(u"<nd ref='{0}' />\n".format(nid))
+						out.append(u"</way>\n")			
+				
+				areaUuidMap[objId] = (wayOuterId, wayInnersIds)
+		
+		#Tie together multipolygons with relations
+		for objType in ["areas"]:
+			objDict = area[objType]
+			for objId in objDict:
+				objShapes, objData = objDict[objId]
+				shape = objShapes[0]
+				outer, inners = shape
+				if len(inners) == 0: continue
+				wayOuterId, wayInnerIds = areaUuidMap[objId]
+
+				out.append(u"<relation id='{0}' timestamp='2008-03-10T17:43:07Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(
+					idCount["relation"]))
+				idCount["relation"] += 1
+				out.append(u"  <member type='way' ref='{0}' role='outer' />\n".format(wayOuterId))
+				for wid in wayInnerIds:
+					out.append(u"  <member type='way' ref='{0}' role='inner' />\n".format(wid))
+				out.append(u"  <tag k='type' v='multipolygon' />\n")
+				for key in objData:
+					out.append(u"  <tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
+				out.append(u"</relation>\n")
+
 
 		out.append(u"</osm>\n")
 
 		web.header('Content-Type', 'text/xml')
 		return "".join(out).encode("utf-8")
 
+class ApiBase(object):
+	def GET(self):
+		return self.Render()
+
+	def POST(self):
+		return self.Render()
+
+	def Render(self):
+		web.header('Content-Type', 'text/plain')
+		return "Base url for API"
+
 urls = (
 	'/api/0.6/map', 'ApiMap',
+	'/', 'ApiBase'
 	)
 
 def RenderTemplate(template_name, **context):
