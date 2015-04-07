@@ -10,17 +10,13 @@ import StringIO
 import config, zigg
 from jinja2 import Environment, FileSystemLoader
 from xml.sax.saxutils import escape
+import xml.etree.ElementTree as ET
 
-class ApiMap(object):
-	def GET(self):
-		#Add a global lock TODO
-		return self.Render()
+class IdAssignment(object):
+	def __init__(self):
+		pass
 
-	def POST(self):
-		#Add a global lock TODO
-		return self.Render()
-
-	def AssignId(self, objType, uuid, subObject = None):
+	def AssignId(self, objType, uuid = None, subObject = None):
 		lastIdsDb = web.ctx.lastIdsDb
 		nodeIdToUuidDb = web.ctx.nodeIdToUuidDb
 		uuidToNodeIdDb = web.ctx.uuidToNodeIdDb
@@ -31,7 +27,9 @@ class ApiMap(object):
 		relationIdToUuidDb = web.ctx.relationIdToUuidDb
 		uuidToRelationIdDb = web.ctx.uuidToRelationIdDb
 
-		cid = uuid
+		cid = ""
+		if uuid is not None:
+			cid += uuid
 		if subObject is not None:
 			cid += subObject
 
@@ -68,9 +66,21 @@ class ApiMap(object):
 
 		return newId
 
+
+class ApiMap(object):
+	def GET(self):
+		#Add a global lock TODO
+		return self.Render()
+
+	def POST(self):
+		#Add a global lock TODO
+		return self.Render()
+
+
 	def Render(self):
 		webInput = web.input()
 		ziggDb = web.ctx.ziggDb
+		idAssignment = IdAssignment()
 
 		bbox = map(float, webInput["bbox"].split(","))
 		area = ziggDb.GetArea(bbox)
@@ -87,7 +97,7 @@ class ApiMap(object):
 			shape = objShapes[0]
 			outer, inners = shape
 			pt = outer[0]
-			nid = self.AssignId("node", nodeId)
+			nid = idAssignment.AssignId("node", nodeId)
 
 			out.append(u"<node id='{0}' timestamp='2006-11-30T00:03:33Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' lat='{1}' lon='{2}'>\n".format(nid, pt[0], pt[1]))
 			for key in objData:
@@ -106,7 +116,7 @@ class ApiMap(object):
 				for pt in outer:
 					if pt[2] in nodesWritten: continue #Already written to output
 
-					nid = self.AssignId("node", pt[2])
+					nid = idAssignment.AssignId("node", pt[2])
 
 					out.append(u"<node id='{0}' timestamp='2006-11-30T00:03:33Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' lat='{1}' lon='{2}'>\n".format(nid, pt[0], pt[1]))
 
@@ -119,7 +129,7 @@ class ApiMap(object):
 					for pt in inner:
 						if pt[2] in nodesWritten: continue #Already written to output
 
-						nid = self.AssignId("node", pt[2])
+						nid = idAssignment.AssignId("node", pt[2])
 						out.append(u"<node id='{0}' timestamp='2006-11-30T00:03:33Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' lat='{1}' lon='{2}'>\n".format(nid, pt[0], pt[1]))
 						out.append(u"</node>\n")
 
@@ -132,11 +142,11 @@ class ApiMap(object):
 				objShapes, objData = objDict[objId]
 				shape = objShapes[0]
 				outer, inners = shape
-				oid = self.AssignId("way", objId, "o")
+				oid = idAssignment.AssignId("way", objId, "o")
 
 				out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(oid))
 				for pt in outer:
-					nid = self.AssignId("node", pt[2])
+					nid = idAssignment.AssignId("node", pt[2])
 					out.append(u"<nd ref='{0}' />\n".format(nid))
 				for key in objData:
 					out.append(u"<tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
@@ -155,12 +165,12 @@ class ApiMap(object):
 				if len(inners) != 0: continue
 
 				#Write outer way
-				oid = self.AssignId("way", objId)
+				oid = idAssignment.AssignId("way", objId)
 				out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(oid))
 				for pt in outer:
-					nid = self.AssignId("node", pt[2])
+					nid = idAssignment.AssignId("node", pt[2])
 					out.append(u"<nd ref='{0}' />\n".format(nid))
-				nid = self.AssignId("node", outer[0][2]) #Close area
+				nid = idAssignment.AssignId("node", outer[0][2]) #Close area
 				out.append(u"<nd ref='{0}' />\n".format(nid))
 				out.append(u"  <tag k='area' v='yes' />\n")
 				for key in objData:
@@ -177,13 +187,13 @@ class ApiMap(object):
 				if len(inners) == 0: continue
 
 				#Write outer way
-				oid = self.AssignId("way", objId, "o")
+				oid = idAssignment.AssignId("way", objId, "o")
 				out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(oid))
 				wayOuterId = oid
 				for pt in outer:
-					nid = self.AssignId("node", pt[2])
+					nid = idAssignment.AssignId("node", pt[2])
 					out.append(u"<nd ref='{0}' />\n".format(nid))
-				nid = self.AssignId("node", outer[0][2]) #Close area
+				nid = idAssignment.AssignId("node", outer[0][2]) #Close area
 				out.append(u"<nd ref='{0}' />\n".format(nid))
 				out.append(u"</way>\n")
 
@@ -191,13 +201,13 @@ class ApiMap(object):
 				wayInnersIds = []
 				if inners is not None:
 					for i, inner in enumerate(inners):
-						oid = self.AssignId("way", objId, "i{0}".format(i))
+						oid = idAssignment.AssignId("way", objId, "i{0}".format(i))
 						out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' inner='1'>\n".format(oid))
 						wayInnersIds.append(oid)
 						for pt in inner:
-							nid = self.AssignId("node", pt[2])
+							nid = idAssignment.AssignId("node", pt[2])
 							out.append(u"<nd ref='{0}' />\n".format(nid))
-						nid = self.AssignId("node", inner[0][2]) #Close area
+						nid = idAssignment.AssignId("node", inner[0][2]) #Close area
 						out.append(u"<nd ref='{0}' />\n".format(nid))
 						out.append(u"</way>\n")			
 				
@@ -213,7 +223,7 @@ class ApiMap(object):
 				if len(inners) == 0: continue
 				wayOuterId, wayInnerIds = areaUuidMap[objId]
 
-				oid = self.AssignId("relation", objId)
+				oid = idAssignment.AssignId("relation", objId)
 				out.append(u"<relation id='{0}' timestamp='2008-03-10T17:43:07Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(
 					oid))
 				out.append(u"  <member type='way' ref='{0}' role='outer' />\n".format(wayOuterId))
@@ -249,9 +259,8 @@ class ApiCapabilities(object):
 		return self.Render()
 
 	def Render(self):
-		web.header('Content-Type', 'text/xml')
+		
 		out = []
-
 		out.append(u'<?xml version="1.0" encoding="UTF-8"?>')
 		out.append(u'<osm version="0.6" generator="ZiggDb" copyright="TBD" attribution="TBD" license="TBD">')
 		out.append(u'  <api>')
@@ -272,12 +281,235 @@ class ApiCapabilities(object):
 		out.append(u'  </policy>')
 		out.append(u'</osm>')
 
+		web.header('Content-Type', 'text/xml')
 		return "".join(out).encode("utf-8")
+
+class ApiChangesetCreate(object):
+	def GET(self):
+		return self.Render()
+
+	def POST(self):
+		return self.Render()
+
+	def PUT(self):
+		return self.Render()
+
+	def Render(self):
+		idAssignment = IdAssignment()
+		cid = idAssignment.AssignId("changeset")
+		webInput = web.input()
+		webData = web.data()
+
+
+		requestNum = idAssignment.AssignId("request")
+		curdir = os.path.dirname(__file__)
+		fi = open(os.path.join(curdir, "{0}.txt".format(requestNum)), "wt")
+		fi.write(str(self.__class__.__name__)+"\n")
+		fi.write(str(webInput)+"\n")
+		fi.write(str(web.ctx.env.copy())+"\n")
+		fi.write(str(web.data())+"\n")
+		fi.write("response\n")
+		fi.write(str(cid)+"\n")
+
+		fi.close()
+
+		web.header('Content-Type', 'text/plain')
+		return str(cid).encode("utf-8")
+
+class ApiChangesets(object):
+	def GET(self):
+		return self.Render()
+
+	def POST(self):
+		return self.Render()
+
+	def PUT(self):
+		return self.Render()
+
+	def Render(self):
+		idAssignment = IdAssignment()
+		requestNum = idAssignment.AssignId("request")
+		curdir = os.path.dirname(__file__)
+		fi = open(os.path.join(curdir, "{0}.txt".format(requestNum)), "wt")
+		webInput = web.input()
+		fi.write(str(self.__class__.__name__)+"\n")
+		fi.write(str(webInput))
+		fi.close()
+
+		return "bonk"
+
+class ApiChangeset(object):
+	def GET(self, cid):
+
+		out = []
+		out.append(u'<?xml version="1.0" encoding="UTF-8"?>')
+		out.append(u'<osm version="0.6" generator="ZiggDb" copyright="TBD" attribution="TBD" license="TBD">\n')
+		out.append(u'<changeset id="{0}" user="ZiggDb" uid="1" created_at="2006-01-26T01:23:30Z" closed_at="2006-01-26T03:19:55Z" open="false" min_lat="58.4069356" min_lon="15.5864985" max_lat="58.4188714" max_lon="15.6195092" comments_count="0"/>\n'.format(cid))
+		out.append(u'</osm>\n')
+		
+		web.header('Content-Type', 'text/xml')
+		return "".join(out).encode("utf-8")
+
+	def POST(self, cid):
+		return self.Render(cid)
+
+	def PUT(self, cid):
+		return self.Render(cid)
+
+	def Render(self, cid):
+		idAssignment = IdAssignment()
+
+		requestNum = idAssignment.AssignId("request")
+		curdir = os.path.dirname(__file__)
+		fi = open(os.path.join(curdir, "{0}.txt".format(requestNum)), "wt")
+		webData = web.data()
+		webInput = web.input()
+		fi.write(str(self.__class__.__name__)+"\n")
+		fi.write(str(webInput)+"\n")
+		fi.write(str(cid)+"\n")
+		fi.write(str(web.ctx.env.copy())+"\n")
+		fi.write(str(web.data())+"\n")
+		fi.close()
+
+		web.header('Content-Type', 'text/xml')
+		return "bonk"
+
+class ApiChangesetUpload(object):
+
+	def POST(self, cid):
+		return self.Render(cid)
+
+	def Render(self, cid):
+		idAssignment = IdAssignment()
+		webData = web.data()
+		nodeCount = 100
+
+		newNodes = []
+		root = ET.fromstring(webData)
+		for meth in root:
+			method = meth.tag
+			for el in meth:
+				objTy = el.tag
+				objId = int(el.attrib["id"])
+				objCid = int(el.attrib["changeset"])
+				if objTy == "node":
+					objLat = float(el.attrib["lat"])
+					objLon = float(el.attrib["lon"])
+
+					newId = nodeCount
+					nodeCount += 1
+
+					newNodes.append((objId, newId))
+
+		out = []
+		out.append(u'<?xml version="1.0" encoding="UTF-8"?>\n')
+		out.append(u'<diffResult generator="OpenStreetMap Server" version="0.6">\n')
+		for nd in newNodes:
+			out.append(u'<node old_id="{0}" new_id="{1}" new_version="{2}"/>\n'.format(nd[0], nd[1], 1))
+		out.append(u'</diffResult>\n')
+
+		requestNum = idAssignment.AssignId("request")
+		curdir = os.path.dirname(__file__)
+		fi = open(os.path.join(curdir, "{0}.txt".format(requestNum)), "wt")
+		webInput = web.input()
+		fi.write(str(self.__class__.__name__)+"\n")
+		fi.write(str(webInput)+"\n")
+		fi.write(str(cid)+"\n")
+		fi.write(str(web.ctx.env.copy())+"\n")
+		fi.write(str(web.data())+"\n")
+		fi.write("response:\n")
+		fi.write("".join(out).encode("utf-8")+"\n")
+		fi.close()
+
+		web.header('Content-Type', 'text/xml')
+		return u"".join(out).encode("utf-8")
+
+class ApiChangesetClose(object):
+	def GET(self, cid):
+		return self.Render(cid)
+
+	def POST(self, cid):
+		return self.Render(cid)
+
+	def PUT(self, cid):
+		return self.Render(cid)
+
+	def Render(self, cid):
+		idAssignment = IdAssignment()
+
+		requestNum = idAssignment.AssignId("request")
+		curdir = os.path.dirname(__file__)
+		fi = open(os.path.join(curdir, "{0}.txt".format(requestNum)), "wt")
+		webData = web.data()
+		webInput = web.input()
+		fi.write(str(self.__class__.__name__)+"\n")
+		fi.write(str(webInput)+"\n")
+		fi.write(str(cid)+"\n")
+		fi.write(str(web.ctx.env.copy())+"\n")
+		fi.write(str(web.data())+"\n")
+		fi.close()
+
+		web.header('Content-Type', 'text/plain')
+		return "" #Nothing is returned
+
+class ApiUserDetails(object):
+	def GET(self):
+		return self.Render()
+
+	def POST(self):
+		return self.Render()
+
+	def PUT(self):
+		return self.Render()
+
+	def Render(self):
+
+		out = []
+		out.append(u'<?xml version="1.0" encoding="UTF-8"?>\n')
+		out.append(u'<osm version="0.6" generator="ZiggDb">\n')
+		out.append(u'  <user id="1" display_name="ApiTests" account_created="2013-07-21T17:53:45Z">\n')
+		out.append(u'    <description></description>\n')
+		#out.append(u'    <img href=""/>\n')
+		out.append(u'    <roles>\n')
+		out.append(u'    </roles>\n')
+		out.append(u'    <changesets count="1"/>\n')
+		out.append(u'    <traces count="0"/>\n')
+		out.append(u'    <blocks>\n')
+		out.append(u'      <received count="0" active="0"/>\n')
+		out.append(u'    </blocks>\n')
+		out.append(u'    <languages>\n')
+		out.append(u'      <lang>en-GB</lang>\n')
+		out.append(u'      <lang>en</lang>\n')
+		out.append(u'    </languages>\n')
+		out.append(u'    <messages>\n')
+		out.append(u'      <received count="0" unread="0"/>\n')
+		out.append(u'      <sent count="0"/>\n')
+		out.append(u'    </messages>\n')
+		out.append(u'  </user>\n')
+		out.append(u'</osm>\n')
+
+		idAssignment = IdAssignment()
+		requestNum = idAssignment.AssignId("request")
+		curdir = os.path.dirname(__file__)
+		fi = open(os.path.join(curdir, "{0}.txt".format(requestNum)), "wt")
+		webInput = web.input()
+		fi.write(str(self.__class__.__name__)+"\n")
+		fi.write(str(webInput))
+		fi.close()
+
+		web.header('Content-Type', 'text/xml')
+		return u"".join(out).encode("utf-8")
 
 urls = (
 	'/api/0.6/map', 'ApiMap',
 	'/api/capabilities', 'ApiCapabilities',
 	'/api/0.6/capabilities', 'ApiCapabilities',
+	'/api/0.6/changeset/create', 'ApiChangesetCreate',
+	'/api/0.6/user/details', 'ApiUserDetails',
+	'/api/0.6/changesets', 'ApiChangesets',
+	'/api/0.6/changeset/([0-9]+)', 'ApiChangeset',
+	'/api/0.6/changeset/([0-9]+)/upload', 'ApiChangesetUpload',
+	'/api/0.6/changeset/([0-9]+)/close', 'ApiChangesetClose',
 	'/', 'ApiBase'
 	)
 
