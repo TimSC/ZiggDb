@@ -80,11 +80,14 @@ class ApiMap(object):
 	def Render(self):
 		webInput = web.input()
 		ziggDb = web.ctx.ziggDb
+		nodePosDb = web.ctx.nodePosDb
 		idAssignment = IdAssignment()
+		writeOldPos = True
 
 		bbox = map(float, webInput["bbox"].split(","))
 		area = ziggDb.GetArea(bbox)
 		nodesWritten = set()
+		areaBboxDict = {}
 
 		out = [u"<?xml version='1.0' encoding='UTF-8'?>\n"]
 		out.append(u"<osm version='0.6' upload='true' generator='ZiggDb'>\n")
@@ -102,9 +105,14 @@ class ApiMap(object):
 			out.append(u"<node id='{0}' timestamp='2006-11-30T00:03:33Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' lat='{1}' lon='{2}'>\n".format(nid, pt[0], pt[1]))
 			for key in objData:
 				out.append(u"  <tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
+
+			if writeOldPos:
+				out.append(u"<tag k='_old_lat' v='{0}' />\n".format(pt[0]))
+				out.append(u"<tag k='_old_lon' v='{0}' />\n".format(pt[1]))
 			out.append(u"</node>\n")
 
 			nodesWritten.add(nodeId)
+			nodePosDb[nid] = pt
 
 		#Write nodes that are part of other objects
 		for objType in ["ways", "areas"]:
@@ -119,10 +127,13 @@ class ApiMap(object):
 					nid = idAssignment.AssignId("node", pt[2])
 
 					out.append(u"<node id='{0}' timestamp='2006-11-30T00:03:33Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' lat='{1}' lon='{2}'>\n".format(nid, pt[0], pt[1]))
-
+					if writeOldPos:
+						out.append(u"<tag k='_old_lat' v='{0}' />\n".format(pt[0]))
+						out.append(u"<tag k='_old_lon' v='{0}' />\n".format(pt[1]))
 					out.append(u"</node>\n")
 
 					nodesWritten.add(pt[2])
+					nodePosDb[nid] = pt
 
 				if inners is None: continue
 				for inner in inners:
@@ -131,9 +142,13 @@ class ApiMap(object):
 
 						nid = idAssignment.AssignId("node", pt[2])
 						out.append(u"<node id='{0}' timestamp='2006-11-30T00:03:33Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' lat='{1}' lon='{2}'>\n".format(nid, pt[0], pt[1]))
+						if writeOldPos:
+							out.append(u"<tag k='_old_lat' v='{0}' />\n".format(pt[0]))
+							out.append(u"<tag k='_old_lon' v='{0}' />\n".format(pt[1]))
 						out.append(u"</node>\n")
 
 						nodesWritten.add(pt[2])
+						nodePosDb[nid] = pt
 
 		#Write ways
 		for objType in ["ways"]:
@@ -144,12 +159,20 @@ class ApiMap(object):
 				outer, inners = shape
 				oid = idAssignment.AssignId("way", objId, "o")
 
+				objBbox = [None, None, None, None]
+				
 				out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(oid))
 				for pt in outer:
 					nid = idAssignment.AssignId("node", pt[2])
 					out.append(u"<nd ref='{0}' />\n".format(nid))
+					UpdateBbox(objBbox, nodePosDb[nid]) #Determine bbox for way
 				for key in objData:
 					out.append(u"<tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
+				if writeOldPos:
+					out.append(u"<tag k='_old_left' v='{0}' />\n".format(objBbox[0]))
+					out.append(u"<tag k='_old_bottom' v='{0}' />\n".format(objBbox[1]))
+					out.append(u"<tag k='_old_right' v='{0}' />\n".format(objBbox[2]))
+					out.append(u"<tag k='_old_top' v='{0}' />\n".format(objBbox[3]))
 				out.append(u"</way>\n")
 
 		areaIdMap = {}
@@ -165,17 +188,28 @@ class ApiMap(object):
 				if len(inners) != 0: continue
 
 				#Write outer way
+				objBbox = [None, None, None, None]
 				oid = idAssignment.AssignId("way", objId)
 				out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(oid))
 				for pt in outer:
 					nid = idAssignment.AssignId("node", pt[2])
 					out.append(u"<nd ref='{0}' />\n".format(nid))
+					UpdateBbox(objBbox, nodePosDb[nid]) #Determine bbox for way
 				nid = idAssignment.AssignId("node", outer[0][2]) #Close area
 				out.append(u"<nd ref='{0}' />\n".format(nid))
 				out.append(u"  <tag k='area' v='yes' />\n")
 				for key in objData:
 					out.append(u"  <tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
+
+				if writeOldPos:
+					out.append(u"<tag k='_old_left' v='{0}' />\n".format(objBbox[0]))
+					out.append(u"<tag k='_old_bottom' v='{0}' />\n".format(objBbox[1]))
+					out.append(u"<tag k='_old_right' v='{0}' />\n".format(objBbox[2]))
+					out.append(u"<tag k='_old_top' v='{0}' />\n".format(objBbox[3]))
+
 				out.append(u"</way>\n")
+
+				areaBboxDict[oid] = objBbox
 
 		#Write ways for areas if inner ways are present
 		for objType in ["areas"]:
@@ -187,32 +221,54 @@ class ApiMap(object):
 				if len(inners) == 0: continue
 
 				#Write outer way
+				objBbox = [None, None, None, None]		
 				oid = idAssignment.AssignId("way", objId, "o")
 				out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(oid))
 				wayOuterId = oid
 				for pt in outer:
 					nid = idAssignment.AssignId("node", pt[2])
 					out.append(u"<nd ref='{0}' />\n".format(nid))
+					UpdateBbox(objBbox, nodePosDb[nid]) #Determine bbox for way
 				nid = idAssignment.AssignId("node", outer[0][2]) #Close area
 				out.append(u"<nd ref='{0}' />\n".format(nid))
+
+				areaBbox = objBbox[:]
+
+				if writeOldPos:
+					out.append(u"<tag k='_old_left' v='{0}' />\n".format(objBbox[0]))
+					out.append(u"<tag k='_old_bottom' v='{0}' />\n".format(objBbox[1]))
+					out.append(u"<tag k='_old_right' v='{0}' />\n".format(objBbox[2]))
+					out.append(u"<tag k='_old_top' v='{0}' />\n".format(objBbox[3]))
+
 				out.append(u"</way>\n")
 
 				#Writer inner ways
 				wayInnersIds = []
 				if inners is not None:
 					for i, inner in enumerate(inners):
+						objBbox = [None, None, None, None]
 						oid = idAssignment.AssignId("way", objId, "i{0}".format(i))
 						out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' inner='1'>\n".format(oid))
 						wayInnersIds.append(oid)
 						for pt in inner:
 							nid = idAssignment.AssignId("node", pt[2])
 							out.append(u"<nd ref='{0}' />\n".format(nid))
+							UpdateBbox(objBbox, nodePosDb[nid]) #Determine bbox for way
+							UpdateBbox(areaBbox, nodePosDb[nid])
 						nid = idAssignment.AssignId("node", inner[0][2]) #Close area
 						out.append(u"<nd ref='{0}' />\n".format(nid))
+
+						if writeOldPos:
+							out.append(u"<tag k='_old_left' v='{0}' />\n".format(objBbox[0]))
+							out.append(u"<tag k='_old_bottom' v='{0}' />\n".format(objBbox[1]))
+							out.append(u"<tag k='_old_right' v='{0}' />\n".format(objBbox[2]))
+							out.append(u"<tag k='_old_top' v='{0}' />\n".format(objBbox[3]))
+
 						out.append(u"</way>\n")			
 				
 				areaUuidMap[objId] = (wayOuterId, wayInnersIds)
-		
+				areaBboxDict[objId] = areaBbox
+
 		#Tie together multipolygons with relations
 		for objType in ["areas"]:
 			objDict = area[objType]
@@ -232,6 +288,14 @@ class ApiMap(object):
 				out.append(u"  <tag k='type' v='multipolygon' />\n")
 				for key in objData:
 					out.append(u"  <tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
+
+				areaBbox = areaBboxDict[objId]
+				if writeOldPos:
+					out.append(u"<tag k='_old_left' v='{0}' />\n".format(areaBbox[0]))
+					out.append(u"<tag k='_old_bottom' v='{0}' />\n".format(areaBbox[1]))
+					out.append(u"<tag k='_old_right' v='{0}' />\n".format(areaBbox[2]))
+					out.append(u"<tag k='_old_top' v='{0}' />\n".format(areaBbox[3]))			
+
 				out.append(u"</relation>\n")
 
 
@@ -374,6 +438,26 @@ class ApiChangeset(object):
 		web.header('Content-Type', 'text/xml')
 		return "bonk"
 
+def UpdateBbox(bbox, pt):
+	#left,bottom,right,top
+	if bbox[0] is None:
+		bbox[0] = pt[1]
+	elif pt[1] < bbox[0]:
+		bbox[0] = pt[1]
+	if bbox[2] is None:
+		bbox[2] = pt[1]
+	elif pt[1] > bbox[2]:
+		bbox[2] = pt[1]
+
+	if bbox[1] is None:
+		bbox[1] = pt[0]
+	elif pt[1] < bbox[0]:
+		bbox[1] = pt[0]
+	if bbox[3] is None:
+		bbox[3] = pt[0]
+	elif pt[1] > bbox[2]:
+		bbox[3] = pt[0]
+
 class ApiChangesetUpload(object):
 
 	def POST(self, cid):
@@ -383,8 +467,12 @@ class ApiChangesetUpload(object):
 		idAssignment = IdAssignment()
 		webData = web.data()
 		nodeCount = 100
+		nodePosDb = web.ctx.nodePosDb
 
-		newNodes = []
+		idMapping = {'node': {}, 'way': {}, 'relation': {}}
+		activeArea = [None, None, None, None]
+
+		#Preprocess data to determin active area
 		root = ET.fromstring(webData)
 		for meth in root:
 			method = meth.tag
@@ -392,20 +480,63 @@ class ApiChangesetUpload(object):
 				objTy = el.tag
 				objId = int(el.attrib["id"])
 				objCid = int(el.attrib["changeset"])
+
+				#Get current node positions and update active area
 				if objTy == "node":
 					objLat = float(el.attrib["lat"])
 					objLon = float(el.attrib["lon"])
 
-					newId = nodeCount
-					nodeCount += 1
+					UpdateBbox(activeArea, [objLat, objLon])
 
-					newNodes.append((objId, newId))
+				tagDict = {}
+				for ch in el:
+					if ch.tag != "tag": continue
+					tagDict[ch.attrib["k"]] = ch.attrib["v"]
+
+				#Get hints from tags on active area
+				if "_old_bottom" in tagDict and "_old_left" in tagDict:
+					UpdateBbox(activeArea, [float(tagDict["_old_bottom"]), float(tagDict["_old_left"])])
+				if "_old_top" in tagDict and "_old_right" in tagDict:
+					UpdateBbox(activeArea, [float(tagDict["_old_top"]), float(tagDict["_old_right"])])
+				if "_old_lat" in tagDict and "_old_lon" in tagDict:
+					UpdateBbox(activeArea, [float(tagDict["_old_lat"]), float(tagDict["_old_lon"])])
+
+				#Get way members
+				for ch in el:
+					if ch.tag != "nd": continue
+					nid = int(ch.attrib["ref"])
+					if nid < 0: continue #Ignore negative nodes since they have no original position
+					pos = nodePosDb[nid]
+					UpdateBbox(activeArea, pos)
+
+				#Get nodes in relation (not sure if this is really meaningful with incomplete 
+				#implementation - what about ways?)
+				for ch in el:
+					if ch.tag != "member": continue
+					if ch.attrib["type"] != "node": continue
+
+					nid = int(ch.attrib["ref"])
+					if nid < 0: continue #Ignore negative nodes since they have no original position
+					pos = nodePosDb[nid]
+					UpdateBbox(activeArea, pos)
+
+		#Detect multipolygons
+
+
+
+
+		#Apply change to database
+
+
+
+		#Return updated IDs to client
 
 		out = []
 		out.append(u'<?xml version="1.0" encoding="UTF-8"?>\n')
 		out.append(u'<diffResult generator="OpenStreetMap Server" version="0.6">\n')
-		for nd in newNodes:
-			out.append(u'<node old_id="{0}" new_id="{1}" new_version="{2}"/>\n'.format(nd[0], nd[1], 1))
+		for nid in idMapping["node"]:
+			nd = idMapping["node"][nid]
+			out.append(u'<node old_id="{0}" new_id="{1}" new_version="{2}"/>\n'.format(nid, nd[0], nd[1]))
 		out.append(u'</diffResult>\n')
 
 		requestNum = idAssignment.AssignId("request")
@@ -417,6 +548,7 @@ class ApiChangesetUpload(object):
 		fi.write(str(cid)+"\n")
 		fi.write(str(web.ctx.env.copy())+"\n")
 		fi.write(str(web.data())+"\n")
+		fi.write(str(activeArea)+"\n")
 		fi.write("response:\n")
 		fi.write("".join(out).encode("utf-8")+"\n")
 		fi.close()
@@ -533,6 +665,7 @@ def InitDatabaseConn():
 	
 	web.ctx.nodeIdToUuidDb = SqliteDict(os.path.join(curdir, 'data', 'nodeIdToUuidDb.sqlite'), autocommit=True)
 	web.ctx.uuidToNodeIdDb = SqliteDict(os.path.join(curdir, 'data', 'uiidToNodeIdDb.sqlite'), autocommit=True)
+	web.ctx.nodePosDb = SqliteDict(os.path.join(curdir, 'data', 'nodePosDb.sqlite'), autocommit=True)
 
 	web.ctx.wayIdToUuidDb = SqliteDict(os.path.join(curdir, 'data', 'wayIdToUuidDb.sqlite'), autocommit=True)
 	web.ctx.uuidToWayIdDb = SqliteDict(os.path.join(curdir, 'data', 'uiidToWayIdDb.sqlite'), autocommit=True)
