@@ -470,7 +470,6 @@ class ApiChangesetUpload(object):
 		nodePosDb = web.ctx.nodePosDb
 		ziggDb = web.ctx.ziggDb
 
-		idMapping = {'node': {}, 'way': {}, 'relation': {}}
 		activeArea = [None, None, None, None]
 
 		#Preprocess data to determin active area
@@ -564,9 +563,10 @@ class ApiChangesetUpload(object):
 		out = []
 		out.append(u'<?xml version="1.0" encoding="UTF-8"?>\n')
 		out.append(u'<diffResult generator="OpenStreetMap Server" version="0.6">\n')
-		for nid in idMapping["node"]:
-			nd = idMapping["node"][nid]
-			out.append(u'<node old_id="{0}" new_id="{1}" new_version="{2}"/>\n'.format(nid, nd[0], nd[1]))
+		for nid in idDiff["nodes"]:
+			nuuid = idDiff["nodes"][nid]
+			newId = idAssignment.AssignId("node", nuuid)
+			out.append(u'<node old_id="{0}" new_id="{1}" new_version="{2}"/>\n'.format(nid, newId, 1))
 		out.append(u'</diffResult>\n')
 
 		requestNum = idAssignment.AssignId("request")
