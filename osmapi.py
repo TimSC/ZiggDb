@@ -82,7 +82,7 @@ class ApiMap(object):
 		ziggDb = web.ctx.ziggDb
 		nodePosDb = web.ctx.nodePosDb
 		idAssignment = IdAssignment()
-		writeOldPos = True
+		writeOldPos = False
 
 		bbox = map(float, webInput["bbox"].split(","))
 		area = ziggDb.GetArea(bbox)
@@ -468,6 +468,7 @@ class ApiChangesetUpload(object):
 		webData = web.data()
 		nodeCount = 100
 		nodePosDb = web.ctx.nodePosDb
+		ziggDb = web.ctx.ziggDb
 
 		idMapping = {'node': {}, 'way': {}, 'relation': {}}
 		activeArea = [None, None, None, None]
@@ -520,14 +521,43 @@ class ApiChangesetUpload(object):
 					pos = nodePosDb[nid]
 					UpdateBbox(activeArea, pos)
 
+		#Extract new nodes
+		newNodes = {}
+		for meth in root:
+			method = meth.tag
+			if method != "create": continue
+			for el in meth:
+				if el.tag != "node": continue
+				objId = int(el.attrib["id"])
+				if objId >= 0: continue
+				objCid = int(el.attrib["changeset"])
+				objLat = float(el.attrib["lat"])
+				objLon = float(el.attrib["lon"])
+
+				tagDict = {}
+				for ch in el:
+					if ch.tag != "tag": continue
+					tagDict[ch.attrib["k"]] = ch.attrib["v"]
+
+				newNodes[objId] = (objLat, objLon, tagDict)
+	
 		#Detect multipolygons
 
 
-
+	
+				
 
 		#Apply change to database
+		activeData = ziggDb.GetArea(activeArea)
+		for nid in newNodes:
+			pos = newNodes[nid]
+			activeData["nodes"][nid] = [[[[[pos[0], pos[1], nid]], None]], pos[2]]
 
+		userInfo = {}
+		idDiff = ziggDb.SetArea(activeData, userInfo)
 
+		#Update object cache
+		
 
 		#Return updated IDs to client
 
