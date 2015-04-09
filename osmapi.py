@@ -44,7 +44,7 @@ class IdAssignment(object):
 
 		#Assign a new ID
 		newId = None
-		if objType in lastIdsDb:
+		if objType in self.lastIdsDb:
 			newId = int(self.lastIdsDb[objType]) + 1
 		else:
 			newId = 1
@@ -68,14 +68,14 @@ class IdAssignment(object):
 	def GetUuidFromId(self, objTy, objId):
 		objIdStr = str(objId)
 
-		if objType == "node" and objIdStr in self.nodeIdToUuidDb:
-			self.nodeIdToUuidDb[objIdStr]
+		if objTy == "node" and objIdStr in self.nodeIdToUuidDb:
+			return self.nodeIdToUuidDb[objIdStr]
 
-		if objType == "way" and objIdStr in self.wayIdToUuidDb:
-			self.wayIdToUuidDb[objIdStr]
+		if objTy == "way" and objIdStr in self.wayIdToUuidDb:
+			return self.wayIdToUuidDb[objIdStr]
 
-		if objType == "relation" and objIdStr in self.relationIdToUuidDb:
-			self.relationIdToUuidDb[objIdStr]
+		if objTy == "relation" and objIdStr in self.relationIdToUuidDb:
+			return self.relationIdToUuidDb[objIdStr]
 
 		return None
 
@@ -536,12 +536,16 @@ class ApiChangesetUpload(object):
 
 		activeData = ziggDb.GetArea(activeArea)
 
+		newNodes = {}
+		modNodes = {}
+		delNodes = set()
+
 		for meth in root:
 			method = meth.tag
 			if method == "create":
 
 				#Extract new nodes
-				newNodes = {}
+				
 				for el in meth:
 					if el.tag != "node": continue
 					objId = int(el.attrib["id"])
@@ -564,35 +568,34 @@ class ApiChangesetUpload(object):
 
 
 			if method == "modify":
-				modNodes = {}
+				
 				for el in meth:
 					if el.tag != "node": continue
 					objId = int(el.attrib["id"])
 					if objId < 0: continue
 					objLat = float(el.attrib["lat"])
 					objLon = float(el.attrib["lon"])
+					objVer = float(el.attrib["version"])
 
 					#Find uuid of node
 					nuuid = idAssignment.GetUuidFromId("node", objId)			
 					if nuuid is None: 
-						raise RuntimeError("Unknown object in upload")
+						raise RuntimeError("Unknown node {0} in upload".format(objId))
 			
 					tagDict = {}
 					for ch in el:
 						if ch.tag != "tag": continue
 						tagDict[ch.attrib["k"]] = ch.attrib["v"]
 
-					modNodes[nuuid] = [objLat, objLon, tagDict]
+					modNodes[nuuid] = [objLat, objLon, tagDict, objVer]
 
 				#Apply change to database
 				for nid in modNodes:
 					pos = modNodes[nid]
 					activeData["nodes"][nid] = [[[[[pos[0], pos[1], nid]], None]], pos[2]]
 
-
 			if method == "delete":
-				delNodes = set()
-
+				
 				for el in meth:
 					if el.tag != "node": continue
 					objId = int(el.attrib["id"])
@@ -601,19 +604,18 @@ class ApiChangesetUpload(object):
 					#Find uuid of node
 					nuuid = idAssignment.GetUuidFromId("node", objId)			
 					if nuuid is None: 
-						raise RuntimeError("Unknown object in upload")
+						raise RuntimeError("Unknown node {0} in upload".format(objId))
 			
 					tagDict = {}
 					for ch in el:
 						if ch.tag != "tag": continue
 						tagDict[ch.attrib["k"]] = ch.attrib["v"]
 
-					delNodes.add(nuuid)
+					delNodes.add(objId)
 
 				#Apply change to database
 				for nid in delNodes:
 					del activeData["nodes"][nid]
-
 
 		userInfo = {}
 		idDiff = ziggDb.SetArea(activeData, userInfo)
@@ -627,10 +629,15 @@ class ApiChangesetUpload(object):
 		out = []
 		out.append(u'<?xml version="1.0" encoding="UTF-8"?>\n')
 		out.append(u'<diffResult generator="OpenStreetMap Server" version="0.6">\n')
-		for nid in idDiff["nodes"]:
+		for nid in newNodes:
 			nuuid = idDiff["nodes"][nid]
 			newId = idAssignment.AssignId("node", nuuid)
 			out.append(u'<node old_id="{0}" new_id="{1}" new_version="{2}"/>\n'.format(nid, newId, 1))
+
+		for nid in modNodes:
+			nodeInfo = modNodes[nid]
+			out.append(u'<node old_id="{0}" new_version="{2}"/>\n'.format(nid, nodeInfo[3]+1))
+
 		out.append(u'</diffResult>\n')
 
 		requestNum = idAssignment.AssignId("request")
