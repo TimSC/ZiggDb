@@ -14,18 +14,17 @@ import xml.etree.ElementTree as ET
 
 class IdAssignment(object):
 	def __init__(self):
-		pass
+		self.lastIdsDb = web.ctx.lastIdsDb
+		self.nodeIdToUuidDb = web.ctx.nodeIdToUuidDb
+		self.uuidToNodeIdDb = web.ctx.uuidToNodeIdDb
+
+		self.wayIdToUuidDb = web.ctx.wayIdToUuidDb
+		self.uuidToWayIdDb = web.ctx.uuidToWayIdDb
+
+		self.relationIdToUuidDb = web.ctx.relationIdToUuidDb
+		self.uuidToRelationIdDb = web.ctx.uuidToRelationIdDb
 
 	def AssignId(self, objType, uuid = None, subObject = None):
-		lastIdsDb = web.ctx.lastIdsDb
-		nodeIdToUuidDb = web.ctx.nodeIdToUuidDb
-		uuidToNodeIdDb = web.ctx.uuidToNodeIdDb
-
-		wayIdToUuidDb = web.ctx.wayIdToUuidDb
-		uuidToWayIdDb = web.ctx.uuidToWayIdDb
-
-		relationIdToUuidDb = web.ctx.relationIdToUuidDb
-		uuidToRelationIdDb = web.ctx.uuidToRelationIdDb
 
 		cid = ""
 		if uuid is not None:
@@ -34,38 +33,51 @@ class IdAssignment(object):
 			cid += subObject
 
 		#Check if ID already assigned
-		if objType == "node" and cid in uuidToNodeIdDb:
-			return int(uuidToNodeIdDb[str(cid)])
+		if objType == "node" and cid in self.uuidToNodeIdDb:
+			return int(self.uuidToNodeIdDb[str(cid)])
 
-		if objType == "way" and cid in uuidToWayIdDb:
-			return int(uuidToWayIdDb[str(cid)])
+		if objType == "way" and cid in self.uuidToWayIdDb:
+			return int(self.uuidToWayIdDb[str(cid)])
 
-		if objType == "relation" and cid in uuidToRelationIdDb:
-			return int(uuidToRelationIdDb[str(cid)])
+		if objType == "relation" and cid in self.uuidToRelationIdDb:
+			return int(self.uuidToRelationIdDb[str(cid)])
 
 		#Assign a new ID
 		newId = None
 		if objType in lastIdsDb:
-			newId = int(lastIdsDb[objType]) + 1
+			newId = int(self.lastIdsDb[objType]) + 1
 		else:
 			newId = 1
 
-		lastIdsDb[objType] = str(newId)
+		self.lastIdsDb[objType] = str(newId)
 
 		if objType == "node":
-			nodeIdToUuidDb[str(newId)] = str(cid)
-			uuidToNodeIdDb[str(cid)] = str(newId)
+			self.nodeIdToUuidDb[str(newId)] = str(cid)
+			self.uuidToNodeIdDb[str(cid)] = str(newId)
 
 		if objType == "way":
-			wayIdToUuidDb[str(newId)] = str(cid)
-			uuidToWayIdDb[str(cid)] = str(newId)
+			self.wayIdToUuidDb[str(newId)] = str(cid)
+			self.uuidToWayIdDb[str(cid)] = str(newId)
 
 		if objType == "relation":
-			relationIdToUuidDb[str(newId)] = str(cid)
-			uuidToRelationIdDb[str(cid)] = str(newId)
+			self.relationIdToUuidDb[str(newId)] = str(cid)
+			self.uuidToRelationIdDb[str(cid)] = str(newId)
 
 		return newId
 
+	def GetUuidFromId(self, objTy, objId):
+		objIdStr = str(objId)
+
+		if objType == "node" and objIdStr in self.nodeIdToUuidDb:
+			self.nodeIdToUuidDb[objIdStr]
+
+		if objType == "way" and objIdStr in self.wayIdToUuidDb:
+			self.wayIdToUuidDb[objIdStr]
+
+		if objType == "relation" and objIdStr in self.relationIdToUuidDb:
+			self.relationIdToUuidDb[objIdStr]
+
+		return None
 
 class ApiMap(object):
 	def GET(self):
@@ -520,40 +532,92 @@ class ApiChangesetUpload(object):
 					pos = nodePosDb[nid]
 					UpdateBbox(activeArea, pos)
 
-		#Extract new nodes
-		newNodes = {}
-		for meth in root:
-			method = meth.tag
-			if method != "create": continue
-			for el in meth:
-				if el.tag != "node": continue
-				objId = int(el.attrib["id"])
-				if objId >= 0: continue
-				objCid = int(el.attrib["changeset"])
-				objLat = float(el.attrib["lat"])
-				objLon = float(el.attrib["lon"])
-
-				tagDict = {}
-				for ch in el:
-					if ch.tag != "tag": continue
-					tagDict[ch.attrib["k"]] = ch.attrib["v"]
-
-				newNodes[objId] = (objLat, objLon, tagDict)
-	
 		#Detect multipolygons
 
+		activeData = ziggDb.GetArea(activeArea)
 
+		for meth in root:
+			method = meth.tag
+			if method == "create":
+
+				#Extract new nodes
+				newNodes = {}
+				for el in meth:
+					if el.tag != "node": continue
+					objId = int(el.attrib["id"])
+					if objId >= 0: continue
+					objLat = float(el.attrib["lat"])
+					objLon = float(el.attrib["lon"])
+
+					tagDict = {}
+					for ch in el:
+						if ch.tag != "tag": continue
+						tagDict[ch.attrib["k"]] = ch.attrib["v"]
+
+					newNodes[objId] = (objLat, objLon, tagDict)
 	
 				
+				#Apply change to database
+				for nid in newNodes:
+					pos = newNodes[nid]
+					activeData["nodes"][nid] = [[[[[pos[0], pos[1], nid]], None]], pos[2]]
 
-		#Apply change to database
-		activeData = ziggDb.GetArea(activeArea)
-		for nid in newNodes:
-			pos = newNodes[nid]
-			activeData["nodes"][nid] = [[[[[pos[0], pos[1], nid]], None]], pos[2]]
+
+			if method == "modify":
+				modNodes = {}
+				for el in meth:
+					if el.tag != "node": continue
+					objId = int(el.attrib["id"])
+					if objId < 0: continue
+					objLat = float(el.attrib["lat"])
+					objLon = float(el.attrib["lon"])
+
+					#Find uuid of node
+					nuuid = idAssignment.GetUuidFromId("node", objId)			
+					if nuuid is None: 
+						raise RuntimeError("Unknown object in upload")
+			
+					tagDict = {}
+					for ch in el:
+						if ch.tag != "tag": continue
+						tagDict[ch.attrib["k"]] = ch.attrib["v"]
+
+					modNodes[nuuid] = [objLat, objLon, tagDict]
+
+				#Apply change to database
+				for nid in modNodes:
+					pos = modNodes[nid]
+					activeData["nodes"][nid] = [[[[[pos[0], pos[1], nid]], None]], pos[2]]
+
+
+			if method == "delete":
+				delNodes = set()
+
+				for el in meth:
+					if el.tag != "node": continue
+					objId = int(el.attrib["id"])
+					if objId < 0: continue
+
+					#Find uuid of node
+					nuuid = idAssignment.GetUuidFromId("node", objId)			
+					if nuuid is None: 
+						raise RuntimeError("Unknown object in upload")
+			
+					tagDict = {}
+					for ch in el:
+						if ch.tag != "tag": continue
+						tagDict[ch.attrib["k"]] = ch.attrib["v"]
+
+					delNodes.add(nuuid)
+
+				#Apply change to database
+				for nid in delNodes:
+					del activeData["nodes"][nid]
+
 
 		userInfo = {}
 		idDiff = ziggDb.SetArea(activeData, userInfo)
+
 
 		#Update object cache
 		
