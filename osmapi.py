@@ -484,7 +484,20 @@ class ApiChangesetUpload(object):
 
 		activeArea = [None, None, None, None]
 
-		#Preprocess data to determin active area
+		logging = True
+		if logging:
+			requestNum = idAssignment.AssignId("request")
+			curdir = os.path.dirname(__file__)
+			fi = open(os.path.join(curdir, "{0}.txt".format(requestNum)), "wt")
+			webInput = web.input()
+			fi.write(str(self.__class__.__name__)+"\n")
+			fi.write(str(webInput)+"\n")
+			fi.write(str(cid)+"\n")
+			fi.write(str(web.ctx.env.copy())+"\n")
+			fi.write(str(web.data())+"\n")
+
+
+		#Preprocess data to determine active area
 		root = ET.fromstring(webData)
 		for meth in root:
 			method = meth.tag
@@ -497,8 +510,13 @@ class ApiChangesetUpload(object):
 				if objTy == "node":
 					objLat = float(el.attrib["lat"])
 					objLon = float(el.attrib["lon"])
+					nid = int(el.attrib["id"])
 
 					UpdateBbox(activeArea, [objLat, objLon])
+
+					if nid < 0: continue #Ignore negative nodes since they have no original position
+					pos = nodePosDb[nid]
+					UpdateBbox(activeArea, pos)
 
 				tagDict = {}
 				for ch in el:
@@ -532,9 +550,14 @@ class ApiChangesetUpload(object):
 					pos = nodePosDb[nid]
 					UpdateBbox(activeArea, pos)
 
+		if logging:
+			fi.write(str(activeArea)+"\n")
+
 		#Detect multipolygons
 
 		activeData = ziggDb.GetArea(activeArea)
+
+		#assert len(activeData["nodes"]) > 0
 
 		newNodes = {}
 		modNodes = {}
@@ -640,19 +663,10 @@ class ApiChangesetUpload(object):
 
 		out.append(u'</diffResult>\n')
 
-		requestNum = idAssignment.AssignId("request")
-		curdir = os.path.dirname(__file__)
-		fi = open(os.path.join(curdir, "{0}.txt".format(requestNum)), "wt")
-		webInput = web.input()
-		fi.write(str(self.__class__.__name__)+"\n")
-		fi.write(str(webInput)+"\n")
-		fi.write(str(cid)+"\n")
-		fi.write(str(web.ctx.env.copy())+"\n")
-		fi.write(str(web.data())+"\n")
-		fi.write(str(activeArea)+"\n")
-		fi.write("response:\n")
-		fi.write("".join(out).encode("utf-8")+"\n")
-		fi.close()
+		if logging:
+			fi.write("response:\n")
+			fi.write("".join(out).encode("utf-8")+"\n")
+			fi.close()
 
 		web.header('Content-Type', 'text/xml')
 		return u"".join(out).encode("utf-8")
