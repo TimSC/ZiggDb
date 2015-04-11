@@ -463,11 +463,11 @@ def UpdateBbox(bbox, pt):
 
 	if bbox[1] is None:
 		bbox[1] = pt[0]
-	elif pt[1] < bbox[0]:
+	elif pt[0] < bbox[0]:
 		bbox[1] = pt[0]
 	if bbox[3] is None:
 		bbox[3] = pt[0]
-	elif pt[1] > bbox[2]:
+	elif pt[0] > bbox[2]:
 		bbox[3] = pt[0]
 
 class ApiChangesetUpload(object):
@@ -501,22 +501,31 @@ class ApiChangesetUpload(object):
 		root = ET.fromstring(webData)
 		for meth in root:
 			method = meth.tag
+			fi.write(str(meth.tag)+"\n")
 			for el in meth:
 				objTy = el.tag
+				fi.write(str(objTy)+"\n")
 				objId = int(el.attrib["id"])
 				objCid = int(el.attrib["changeset"])
 
 				#Get current node positions and update active area
 				if objTy == "node":
+					fi.write("a\n")
 					objLat = float(el.attrib["lat"])
 					objLon = float(el.attrib["lon"])
 					nid = int(el.attrib["id"])
-
+	
+					if logging:
+						fi.write("new node pos {0}\n".format(str([objLat, objLon])))
+	
 					UpdateBbox(activeArea, [objLat, objLon])
 
 					if nid < 0: continue #Ignore negative nodes since they have no original position
 					pos = nodePosDb[nid]
-					UpdateBbox(activeArea, pos)
+					if logging:
+						fi.write("old node pos {0}\n".format(str(pos[0:2])))
+					
+					UpdateBbox(activeArea, pos[:2])
 
 				tagDict = {}
 				for ch in el:
@@ -552,12 +561,11 @@ class ApiChangesetUpload(object):
 
 		if logging:
 			fi.write(str(activeArea)+"\n")
+			fi.flush()
 
 		#Detect multipolygons
 
 		activeData = ziggDb.GetArea(activeArea)
-
-		#assert len(activeData["nodes"]) > 0
 
 		newNodes = {}
 		modNodes = {}
@@ -598,7 +606,7 @@ class ApiChangesetUpload(object):
 					if objId < 0: continue
 					objLat = float(el.attrib["lat"])
 					objLon = float(el.attrib["lon"])
-					objVer = float(el.attrib["version"])
+					objVer = int(el.attrib["version"])
 
 					#Find uuid of node
 					nuuid = idAssignment.GetUuidFromId("node", objId)			
@@ -657,9 +665,10 @@ class ApiChangesetUpload(object):
 			newId = idAssignment.AssignId("node", nuuid)
 			out.append(u'<node old_id="{0}" new_id="{1}" new_version="{2}"/>\n'.format(nid, newId, 1))
 
-		for nid in modNodes:
+		for nuuid in modNodes:
 			nodeInfo = modNodes[nid]
-			out.append(u'<node old_id="{0}" new_version="{2}"/>\n'.format(nid, nodeInfo[3]+1))
+			nid = idAssignment.AssignId("node", nuuid)
+			out.append(u'<node old_id="{0}" new_id="{0}" new_version="{1}"/>\n'.format(nid, nodeInfo[3]+1))
 
 		out.append(u'</diffResult>\n')
 
