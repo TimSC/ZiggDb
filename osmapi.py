@@ -463,12 +463,15 @@ def UpdateBbox(bbox, pt):
 
 	if bbox[1] is None:
 		bbox[1] = pt[0]
-	elif pt[0] < bbox[0]:
+	elif pt[0] < bbox[1]:
 		bbox[1] = pt[0]
 	if bbox[3] is None:
 		bbox[3] = pt[0]
-	elif pt[0] > bbox[2]:
+	elif pt[0] > bbox[3]:
 		bbox[3] = pt[0]
+
+	assert bbox[0] <= bbox[2] 
+	assert bbox[1] <= bbox[3]
 
 class ApiChangesetUpload(object):
 
@@ -560,9 +563,25 @@ class ApiChangesetUpload(object):
 					UpdateBbox(activeArea, pos)
 
 		if logging:
-			fi.write(str(activeArea)+"\n")
+			fi.write("Unpadded"+str(activeArea)+"\n")
 			fi.flush()
 
+		#Pad active area with margin to prevent critical nodes on the edge
+		#This avoids numerical stability problems
+		#left,bottom,right,top
+		activeArea[0] -= 1e-5
+		activeArea[1] -= 1e-5
+		activeArea[2] += 1e-5
+		activeArea[3] += 1e-5
+		if activeArea[0] < -180.: activeArea[0] = -180.
+		if activeArea[1] < -90.: activeArea[0] = -90.
+		if activeArea[2] > 180.: activeArea[0] = 180.
+		if activeArea[3] > 90.: activeArea[0] = 90.
+	
+		if logging:
+			fi.write("Padded"+str(activeArea)+"\n")
+			fi.flush()
+	
 		#Detect multipolygons
 
 		activeData = ziggDb.GetArea(activeArea)

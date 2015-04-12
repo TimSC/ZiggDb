@@ -12,8 +12,11 @@ def CheckRectOverlap(rect1, rect2):
 def CheckPointInRect(pt, rect):
 	#left,bottom,right,top
 
-	if pt[1] < rect[0] or pt[1] > rect[2]: return 0
-	if pt[0] < rect[1] or pt[0] > rect[3]: return 0
+	if rect[0] > rect[2] or rect[1] > rect[3]:
+		raise ValueError("Invalid rectangle")
+
+	if pt[1] < rect[0] or pt[1] > rect[2]: return 2
+	if pt[0] < rect[1] or pt[0] > rect[3]: return 3
 	return 1
 
 def Interp(a, b, frac):
@@ -369,7 +372,12 @@ class ZiggDb(object):
 			raise ValueError("bbox should have 4 values")
 		bbox = map(float, bbox)
 
+		if bbox[0] > bbox[2] or bbox[1] > bbox[3]:
+			raise ValueError("Invalid bbox")
+
 		merged, versionInfo = self._GetTilesFromRepos(bbox)
+
+		print merged["nodes"]["'ir\xeem\xa8I\x7f\x83\x06\x1c\xfa\xa8\xd4\x04\xb1"]
 
 		#Trim objects that are not in the requested bbox at all
 		merged["nodes"] = Trim(merged["nodes"], bbox)
