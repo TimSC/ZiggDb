@@ -504,29 +504,21 @@ class ApiChangesetUpload(object):
 		root = ET.fromstring(webData)
 		for meth in root:
 			method = meth.tag
-			fi.write(str(meth.tag)+"\n")
 			for el in meth:
 				objTy = el.tag
-				fi.write(str(objTy)+"\n")
 				objId = int(el.attrib["id"])
 				objCid = int(el.attrib["changeset"])
 
 				#Get current node positions and update active area
 				if objTy == "node":
-					fi.write("a\n")
 					objLat = float(el.attrib["lat"])
 					objLon = float(el.attrib["lon"])
 					nid = int(el.attrib["id"])
-	
-					if logging:
-						fi.write("new node pos {0}\n".format(str([objLat, objLon])))
-	
+		
 					UpdateBbox(activeArea, [objLat, objLon])
 
 					if nid < 0: continue #Ignore negative nodes since they have no original position
 					pos = nodePosDb[nid]
-					if logging:
-						fi.write("old node pos {0}\n".format(str(pos[0:2])))
 					
 					UpdateBbox(activeArea, pos[:2])
 
@@ -566,21 +558,22 @@ class ApiChangesetUpload(object):
 			fi.write("Unpadded"+str(activeArea)+"\n")
 			fi.flush()
 
-		#Pad active area with margin to prevent critical nodes on the edge
-		#This avoids numerical stability problems
-		#left,bottom,right,top
-		activeArea[0] -= 1e-5
-		activeArea[1] -= 1e-5
-		activeArea[2] += 1e-5
-		activeArea[3] += 1e-5
-		if activeArea[0] < -180.: activeArea[0] = -180.
-		if activeArea[1] < -90.: activeArea[0] = -90.
-		if activeArea[2] > 180.: activeArea[0] = 180.
-		if activeArea[3] > 90.: activeArea[0] = 90.
+		if 0:
+			#Pad active area with margin to prevent critical nodes on the edge
+			#This avoids numerical stability problems
+			#left,bottom,right,top
+			activeArea[0] -= 1e-5
+			activeArea[1] -= 1e-5
+			activeArea[2] += 1e-5
+			activeArea[3] += 1e-5
+			if activeArea[0] < -180.: activeArea[0] = -180.
+			if activeArea[1] < -90.: activeArea[1] = -90.
+			if activeArea[2] > 180.: activeArea[2] = 180.
+			if activeArea[3] > 90.: activeArea[3] = 90.
 	
-		if logging:
-			fi.write("Padded"+str(activeArea)+"\n")
-			fi.flush()
+			if logging:
+				fi.write("Padded"+str(activeArea)+"\n")
+				fi.flush()
 	
 		#Detect multipolygons
 
