@@ -511,16 +511,18 @@ class ApiChangesetUpload(object):
 
 				#Get current node positions and update active area
 				if objTy == "node":
-					objLat = float(el.attrib["lat"])
-					objLon = float(el.attrib["lon"])
-					nid = int(el.attrib["id"])
+					if "lat" in el.attrib and "lat" in el.attrib:
+						objLat = float(el.attrib["lat"])
+						objLon = float(el.attrib["lon"])
 		
-					UpdateBbox(activeArea, [objLat, objLon])
+						UpdateBbox(activeArea, [objLat, objLon])
 
-					if nid < 0: continue #Ignore negative nodes since they have no original position
-					pos = nodePosDb[nid]
+					nid = int(el.attrib["id"])
+					if nid >= 0: 
+						#Ignore negative nodes since they have no original position
+						pos = nodePosDb[nid]
 					
-					UpdateBbox(activeArea, pos[:2])
+						UpdateBbox(activeArea, pos[:2])
 
 				tagDict = {}
 				for ch in el:
