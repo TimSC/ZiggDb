@@ -377,7 +377,7 @@ class ZiggDb(object):
 
 		merged, versionInfo = self._GetTilesFromRepos(bbox)
 
-		print merged["nodes"]["'ir\xeem\xa8I\x7f\x83\x06\x1c\xfa\xa8\xd4\x04\xb1"]
+		#print merged["nodes"]["'ir\xeem\xa8I\x7f\x83\x06\x1c\xfa\xa8\xd4\x04\xb1"]
 
 		#Trim objects that are not in the requested bbox at all
 		merged["nodes"] = Trim(merged["nodes"], bbox)
