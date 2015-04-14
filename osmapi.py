@@ -668,7 +668,7 @@ class ApiChangesetUpload(object):
 
 		out = []
 		out.append(u'<?xml version="1.0" encoding="UTF-8"?>\n')
-		out.append(u'<diffResult generator="OpenStreetMap Server" version="0.6">\n')
+		out.append(u'<diffResult generator="ZiggDb" version="0.6">\n')
 		for nid in newNodes:
 			nuuid = idDiff["nodes"][nid]
 			newId = idAssignment.AssignId("node", nuuid)

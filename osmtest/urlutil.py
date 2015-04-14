@@ -11,7 +11,7 @@ def Put(url, stringIn, userpass = None):
 	
 	c = pycurl.Curl()
 	c.setopt(pycurl.URL, url)
-	c.setopt(pycurl.PUT, 1)
+	c.setopt(pycurl.CUSTOMREQUEST, "PUT")
 	c.setopt(pycurl.READFUNCTION, p.read)
 	if userpass is not None: c.setopt(pycurl.USERPWD, userpass)
 	
