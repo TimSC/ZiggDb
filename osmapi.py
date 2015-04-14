@@ -604,13 +604,11 @@ class ApiChangesetUpload(object):
 						tagDict[ch.attrib["k"]] = ch.attrib["v"]
 
 					newNodes[objId] = (objLat, objLon, tagDict)
-	
-				
+					
 				#Apply change to database
 				for nid in newNodes:
 					pos = newNodes[nid]
 					activeData["nodes"][nid] = [[[[[pos[0], pos[1], nid]], None]], pos[2]]
-
 
 			if method == "modify":
 				
@@ -664,9 +662,6 @@ class ApiChangesetUpload(object):
 
 		userInfo = {}
 		idDiff = ziggDb.SetArea(activeData, userInfo)
-
-
-		#Update object cache
 		
 
 		#Return updated IDs to client
@@ -690,6 +685,23 @@ class ApiChangesetUpload(object):
 			fi.write("response:\n")
 			fi.write("".join(out).encode("utf-8")+"\n")
 			fi.close()
+
+		#Update object cache
+		newNodePosDict = {}
+		for nid in newNodes:
+			objLat, objLon, tagDict = newNodes[nid]
+			nuuid = idDiff["nodes"][nid]
+			newId = idAssignment.AssignId("node", nuuid)
+			nodePosDb[newId] = [objLat, objLon, nuuid]
+
+		for nid in modNodes:	
+			objLat, objLon, tagDict, objVer = modeNodes[nid]
+			nuuid = idDiff["nodes"][nid]
+			nodePosDb[nid] = [objLat, objLon, nuuid]
+
+		#newNodePosDict[nid] = pos
+
+		#Return result
 
 		web.header('Content-Type', 'text/xml')
 		return u"".join(out).encode("utf-8")
