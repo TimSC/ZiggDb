@@ -379,7 +379,7 @@ class ApiChangesetCreate(object):
 
 		requestNum = idAssignment.AssignId("request")
 		curdir = os.path.dirname(__file__)
-		fi = open(os.path.join(curdir, "{0}.txt".format(requestNum)), "wt")
+		fi = open(os.path.join(curdir, "logs/{0}.txt".format(requestNum)), "wt")
 		fi.write(str(self.__class__.__name__)+"\n")
 		fi.write(str(webInput)+"\n")
 		fi.write(str(web.ctx.env.copy())+"\n")
@@ -406,7 +406,7 @@ class ApiChangesets(object):
 		idAssignment = IdAssignment()
 		requestNum = idAssignment.AssignId("request")
 		curdir = os.path.dirname(__file__)
-		fi = open(os.path.join(curdir, "{0}.txt".format(requestNum)), "wt")
+		fi = open(os.path.join(curdir, "logs/{0}.txt".format(requestNum)), "wt")
 		webInput = web.input()
 		fi.write(str(self.__class__.__name__)+"\n")
 		fi.write(str(webInput))
@@ -437,7 +437,7 @@ class ApiChangeset(object):
 
 		requestNum = idAssignment.AssignId("request")
 		curdir = os.path.dirname(__file__)
-		fi = open(os.path.join(curdir, "{0}.txt".format(requestNum)), "wt")
+		fi = open(os.path.join(curdir, "logs/{0}.txt".format(requestNum)), "wt")
 		webData = web.data()
 		webInput = web.input()
 		fi.write(str(self.__class__.__name__)+"\n")
@@ -491,7 +491,7 @@ class ApiChangesetUpload(object):
 		if logging:
 			requestNum = idAssignment.AssignId("request")
 			curdir = os.path.dirname(__file__)
-			fi = open(os.path.join(curdir, "{0}.txt".format(requestNum)), "wt")
+			fi = open(os.path.join(curdir, "logs/{0}.txt".format(requestNum)), "wt")
 			webInput = web.input()
 			fi.write(str(self.__class__.__name__)+"\n")
 			fi.write(str(webInput)+"\n")
@@ -581,6 +581,12 @@ class ApiChangesetUpload(object):
 
 		activeData = ziggDb.GetArea(activeArea)
 
+		if logging:
+			fi.write("Active area nodes {0}\n".format(len(activeData["nodes"])))
+			fi.write("Active area ways {0}\n".format(len(activeData["ways"])))
+			fi.write("Active area areas {0}\n".format(len(activeData["areas"])))
+			fi.flush()
+
 		newNodes = {}
 		modNodes = {}
 		delNodes = set()
@@ -658,7 +664,10 @@ class ApiChangesetUpload(object):
 
 				#Apply change to database
 				for nid in delNodes:
-					del activeData["nodes"][nid]
+					nuuid = idAssignment.GetUuidFromId("node", nid)	
+					if nuuid not in activeData["nodes"] and logging:
+						fi.write("Missing node {0} in delete action\n".format([nuuid]))
+					del activeData["nodes"][nuuid]
 
 		userInfo = {}
 		idDiff = ziggDb.SetArea(activeData, userInfo)
@@ -679,6 +688,10 @@ class ApiChangesetUpload(object):
 			nid = idAssignment.AssignId("node", nuuid)
 			out.append(u'<node old_id="{0}" new_id="{0}" new_version="{1}"/>\n'.format(nid, nodeInfo[3]+1))
 
+		for nuuid in delNodes:
+			nid = idAssignment.AssignId("node", nuuid)
+			out.append(u'<node old_id="{0}"/>\n'.format(nid))
+
 		out.append(u'</diffResult>\n')
 
 		if logging:
@@ -698,6 +711,10 @@ class ApiChangesetUpload(object):
 			objLat, objLon, tagDict, objVer = modNodes[nuuid]
 			nid = idAssignment.AssignId("node", nuuid)
 			nodePosDb[nid] = [objLat, objLon, nuuid]
+
+		for nuuid in delNodes:	
+			nid = idAssignment.AssignId("node", nuuid)
+			del nodePosDb[nid]
 
 		#newNodePosDict[nid] = pos
 
@@ -721,7 +738,7 @@ class ApiChangesetClose(object):
 
 		requestNum = idAssignment.AssignId("request")
 		curdir = os.path.dirname(__file__)
-		fi = open(os.path.join(curdir, "{0}.txt".format(requestNum)), "wt")
+		fi = open(os.path.join(curdir, "logs/{0}.txt".format(requestNum)), "wt")
 		webData = web.data()
 		webInput = web.input()
 		fi.write(str(self.__class__.__name__)+"\n")
@@ -773,7 +790,7 @@ class ApiUserDetails(object):
 		idAssignment = IdAssignment()
 		requestNum = idAssignment.AssignId("request")
 		curdir = os.path.dirname(__file__)
-		fi = open(os.path.join(curdir, "{0}.txt".format(requestNum)), "wt")
+		fi = open(os.path.join(curdir, "logs/{0}.txt".format(requestNum)), "wt")
 		webInput = web.input()
 		fi.write(str(self.__class__.__name__)+"\n")
 		fi.write(str(webInput))

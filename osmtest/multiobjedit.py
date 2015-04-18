@@ -89,19 +89,11 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if verbose: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
 
-	return (1,"OK")
-
 	#Open changeset
-
-	#Delete test node
-	#It seems that pycurl doesn't allow the delete method to upload content. Use the multi object API insted.
-	#deleteNode = "<?xml version='1.0' encoding='UTF-8'?>\n" +\
-	#"<osm version='0.6' generator='JOSM'>\n" +\
-	#"  <node id='"+str(nodeId1)+"' changeset='"+str(cid)+"' version='2' />\n" +\
-	#"</osm>\n"
-	#response = Delete(conf.baseurl+"/0.6/node/"+str(nodeId1),deleteNode,userpass)
-	#if verbose: print response
-	#if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
+	response = Put(conf.baseurl+"/0.6/changeset/create",createChangeset,userpass)
+	if verbose: print response
+	cid = int(response[0])
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating changset")
 
 	deleteWay = '<osmChange version="0.6" generator="JOSM">'+"\n"+\
 	"<delete>\n"+\
