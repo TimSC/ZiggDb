@@ -694,9 +694,9 @@ class ApiChangesetUpload(object):
 			newId = idAssignment.AssignId("node", nuuid)
 			nodePosDb[newId] = [objLat, objLon, nuuid]
 
-		for nid in modNodes:	
-			objLat, objLon, tagDict, objVer = modeNodes[nid]
-			nuuid = idDiff["nodes"][nid]
+		for nuuid in modNodes:	
+			objLat, objLon, tagDict, objVer = modNodes[nuuid]
+			nid = idAssignment.AssignId("node", nuuid)
 			nodePosDb[nid] = [objLat, objLon, nuuid]
 
 		#newNodePosDict[nid] = pos

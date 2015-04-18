@@ -1,8 +1,19 @@
 import sys, conf
 sys.path.append( "." )
 from urlutil import *
+import xml.etree.ElementTree as ET
 
-def TestMultiObjectEditing(userpass, verbose=0):
+def InterpretUploadResponse(response):
+	root = ET.fromstring(response)
+	diff = {"node": {}, "way": {}, "relation": {}}
+	for el in root:
+		val = {}
+		for k in el.attrib:
+			val[k] = int(el.attrib[k])
+		diff[el.tag][int(el.attrib["old_id"])] = val
+	return diff
+
+def TestMultiObjectEditing(userpass, verbose=0, save=False):
 
 	#Create a changeset
 	createChangeset = "<?xml version='1.0' encoding='UTF-8'?>\n" +\
@@ -39,19 +50,20 @@ def TestMultiObjectEditing(userpass, verbose=0):
 	#wayId = int(response[0])
 	print response[0]
 	
+	diff = InterpretUploadResponse(response[0])
+	nodeId1 = diff["node"][-289]["new_id"]
+	nodeId2 = diff["node"][-2008]["new_id"]
+
 	#Close the changeset
 	response = Put(conf.baseurl+"/0.6/changeset/"+str(cid)+"/close","",userpass)
 	if verbose: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
 
-	return (1,"OK")
-
-
-
-	#Read back node
-	response = Get(conf.baseurl+"/0.6/node/"+str(nodeId))
-	if verbose: print response
-	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error reading back node")
+	if 0:
+		#Read back node
+		response = Get(conf.baseurl+"/0.6/node/"+str(nodeId1))
+		if verbose: print response
+		if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error reading back node")
 
 	#Open another changeset
 	response = Put(conf.baseurl+"/0.6/changeset/create",createChangeset,userpass)
@@ -60,22 +72,34 @@ def TestMultiObjectEditing(userpass, verbose=0):
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating changset")
 
 	#Modify test node
+	lat = 51.25
+	lon = -0.60
 	modifyNode = '<osmChange version="0.6" generator="JOSM">'+"\n"+\
 	"<modify>\n"+\
-	"  <node id='"+str(nodeId)+"' version='1' changeset='"+str(cid)+"' lat='"+str(lat)+"' lon='"+str(lon)+"' />\n"+\
+	"  <node id='"+str(nodeId1)+"' version='1' changeset='"+str(cid)+"' lat='"+str(lat)+"' lon='"+str(lon)+"' />\n"+\
 	"</modify>\n"+\
 	"</osmChange>\n"
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",modifyNode,userpass)
 	if verbose: print response
-	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
+	if save: open("mod.html", "wt").write(response[0])
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error modifying node")
+
+	#Close changeset
+	response = Put(conf.baseurl+"/0.6/changeset/"+str(cid)+"/close","",userpass)
+	if verbose: print response
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
+
+	return (1,"OK")
+
+	#Open changeset
 
 	#Delete test node
 	#It seems that pycurl doesn't allow the delete method to upload content. Use the multi object API insted.
 	#deleteNode = "<?xml version='1.0' encoding='UTF-8'?>\n" +\
 	#"<osm version='0.6' generator='JOSM'>\n" +\
-	#"  <node id='"+str(nodeId)+"' changeset='"+str(cid)+"' version='2' />\n" +\
+	#"  <node id='"+str(nodeId1)+"' changeset='"+str(cid)+"' version='2' />\n" +\
 	#"</osm>\n"
-	#response = Delete(conf.baseurl+"/0.6/node/"+str(nodeId),deleteNode,userpass)
+	#response = Delete(conf.baseurl+"/0.6/node/"+str(nodeId1),deleteNode,userpass)
 	#if verbose: print response
 	#if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
 
@@ -91,7 +115,7 @@ def TestMultiObjectEditing(userpass, verbose=0):
 
 	deleteNode = '<osmChange version="0.6" generator="JOSM">' +\
 	"<delete>\n" +\
-	"  <node id='"+str(nodeId)+"' version='2' "+\
+	"  <node id='"+str(nodeId1)+"' version='2' "+\
 	"changeset='"+str(cid)+"' lat='"+str(lat)+"'  lon='"+str(lon)+"' />\n"+\
 	"</delete>\n"+\
 	"</osmChange>\n"
@@ -125,6 +149,8 @@ def TestMultiObjectEditing(userpass, verbose=0):
 	response = Put(conf.baseurl+"/0.6/changeset/"+str(cid)+"/close","",userpass)
 	if verbose: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
+
+	return (1,"OK")
 
 	#Attempt to read deleted node
 	response = Get(conf.baseurl+"/0.6/node/"+str(nodeId))
@@ -160,6 +186,6 @@ if __name__ == "__main__":
 	password = conf.GetPassword()
 	userpass = username+":"+password
 
-	print TestMultiObjectEditing(userpass,1)
+	print TestMultiObjectEditing(userpass,1,1)
 	#print ReadDeletedNode(981182860,1)
 
