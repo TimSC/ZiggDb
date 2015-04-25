@@ -88,6 +88,9 @@ class ApiMap(object):
 		#Add a global lock TODO
 		return self.Render()
 
+	def GetOsmRepresentation(self, bbox):
+		#Get OSM representation of requested area
+		pass
 
 	def Render(self):
 		webInput = web.input()
@@ -577,9 +580,11 @@ class ApiChangesetUpload(object):
 				fi.write("Padded"+str(activeArea)+"\n")
 				fi.flush()
 	
-		#Detect multipolygons
-
+		#Retrieve active area
 		activeData = ziggDb.GetArea(activeArea)
+
+		#Convert active area to osm style representation
+		
 
 		if logging:
 			fi.write("Active area nodes {0}\n".format(len(activeData["nodes"])))
@@ -587,6 +592,7 @@ class ApiChangesetUpload(object):
 			fi.write("Active area areas {0}\n".format(len(activeData["areas"])))
 			fi.flush()
 
+		#Apply changes to OSM representation of active data
 		newNodes = {}
 		modNodes = {}
 		delNodes = set()
@@ -669,6 +675,11 @@ class ApiChangesetUpload(object):
 						fi.write("Missing node {0} in delete action\n".format([nuuid]))
 					del activeData["nodes"][nuuid]
 
+		#Convert OSM representation to zigg based format
+
+
+
+		#Update database with new data
 		userInfo = {}
 		idDiff = ziggDb.SetArea(activeData, userInfo)
 		
