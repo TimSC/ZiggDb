@@ -79,6 +79,104 @@ class IdAssignment(object):
 
 		return None
 
+def ZiggToOsm(idAssignment, area):
+	osmData = {"node": {}, "way": {}, "relation": {}}
+	osmNodes = osmData["node"]
+
+	#Write individual nodes to output
+	for nodeId in area["nodes"]:
+		objShapes, objData = area["nodes"][nodeId]
+		shape = objShapes[0]
+		outer, inners = shape
+		pt = outer[0]
+		nid = idAssignment.AssignId("node", nodeId)
+
+		osmNodes[nid] = (pt, objData)
+
+	#Write nodes that are part of other objects
+	for objType in ["ways", "areas"]:
+		objDict = area[objType]
+		for objId in objDict:
+			objShapes, objData = objDict[objId]
+			shape = objShapes[0]
+			outer, inners = shape
+			for pt in outer:
+				#if pt[2] in nodesWritten: continue #Already written to output
+				#TODO
+				pass
+
+			if inners is None: continue
+			for inner in inners:
+				for pt in inner:
+					#if pt[2] in nodesWritten: continue #Already written to output
+					#nid = idAssignment.AssignId("node", pt[2])
+					#TODO
+					pass
+
+	#Write ways
+	for objType in ["ways"]:
+		objDict = area[objType]
+		for objId in objDict:
+			objShapes, objData = objDict[objId]
+			shape = objShapes[0]
+			outer, inners = shape
+			oid = idAssignment.AssignId("way", objId, "o")
+
+			#TODO
+
+	#Write way for areas if no inner ways are present
+	for objType in ["areas"]:
+		objDict = area[objType]
+		for objId in objDict:
+			objShapes, objData = objDict[objId]
+			shape = objShapes[0]
+			outer, inners = shape
+			if len(inners) != 0: continue
+
+			#Write outer way
+			objBbox = [None, None, None, None]
+			oid = idAssignment.AssignId("way", objId)
+	
+			#TODO
+
+	#Write ways for areas if inner ways are present
+	for objType in ["areas"]:
+		objDict = area[objType]
+		for objId in objDict:
+			objShapes, objData = objDict[objId]
+			shape = objShapes[0]
+			outer, inners = shape
+			if len(inners) == 0: continue
+
+			#Write outer way
+			objBbox = [None, None, None, None]		
+			oid = idAssignment.AssignId("way", objId, "o")
+			#TODO
+
+
+			#Writer inner ways
+			wayInnersIds = []
+			if inners is not None:
+				for i, inner in enumerate(inners):
+					pass
+					#TODO
+
+
+
+	#Tie together multipolygons with relations
+	for objType in ["areas"]:
+		objDict = area[objType]
+		for objId in objDict:
+			objShapes, objData = objDict[objId]
+			shape = objShapes[0]
+			outer, inners = shape
+			if len(inners) == 0: continue
+			#wayOuterId, wayInnerIds = areaUuidMap[objId]
+			#oid = idAssignment.AssignId("relation", objId)
+			#TODO
+
+	return osmData
+
 class ApiMap(object):
 	def GET(self):
 		#Add a global lock TODO
@@ -109,53 +207,36 @@ class ApiMap(object):
   		out.append(u"<bounds minlat='{0}' minlon='{1}' maxlat='{2}' maxlon='{3}' origin='ZiggDb' />".format(
 			bbox[1], bbox[0], bbox[3], bbox[2]))
 
-		#Write individual nodes to output
-		for nodeId in area["nodes"]:
-			objShapes, objData = area["nodes"][nodeId]
-			shape = objShapes[0]
-			outer, inners = shape
-			pt = outer[0]
-			nid = idAssignment.AssignId("node", nodeId)
+		osmData = ZiggToOsm(idAssignment, area)
 
-			out.append(u"<node id='{0}' timestamp='2006-11-30T00:03:33Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' lat='{1}' lon='{2}'>\n".format(nid, pt[0], pt[1]))
+		#Write individual nodes to output
+		for nid in osmData["node"]:
+			objPt, objData = osmData["node"][nid]
+
+			out.append(u"<node id='{0}' timestamp='2006-11-30T00:03:33Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' lat='{1}' lon='{2}'>\n".format(nid, objPt[0], objPt[1]))
 			for key in objData:
 				out.append(u"  <tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
 
 			if writeOldPos:
-				out.append(u"<tag k='_old_lat' v='{0}' />\n".format(pt[0]))
-				out.append(u"<tag k='_old_lon' v='{0}' />\n".format(pt[1]))
+				out.append(u"<tag k='_old_lat' v='{0}' />\n".format(objPt[0]))
+				out.append(u"<tag k='_old_lon' v='{0}' />\n".format(objPt[1]))
 			out.append(u"</node>\n")
 
-			nodesWritten.add(nodeId)
-			nodePosDb[nid] = pt
+			nodePosDb[nid] = objPt
 
-		#Write nodes that are part of other objects
-		for objType in ["ways", "areas"]:
-			objDict = area[objType]
-			for objId in objDict:
-				objShapes, objData = objDict[objId]
-				shape = objShapes[0]
-				outer, inners = shape
-				for pt in outer:
-					if pt[2] in nodesWritten: continue #Already written to output
-
-					nid = idAssignment.AssignId("node", pt[2])
-
-					out.append(u"<node id='{0}' timestamp='2006-11-30T00:03:33Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' lat='{1}' lon='{2}'>\n".format(nid, pt[0], pt[1]))
-					if writeOldPos:
-						out.append(u"<tag k='_old_lat' v='{0}' />\n".format(pt[0]))
-						out.append(u"<tag k='_old_lon' v='{0}' />\n".format(pt[1]))
-					out.append(u"</node>\n")
-
-					nodesWritten.add(pt[2])
-					nodePosDb[nid] = pt
-
-				if inners is None: continue
-				for inner in inners:
-					for pt in inner:
+		if 0:
+			#Write nodes that are part of other objects
+			for objType in ["ways", "areas"]:
+				objDict = area[objType]
+				for objId in objDict:
+					objShapes, objData = objDict[objId]
+					shape = objShapes[0]
+					outer, inners = shape
+					for pt in outer:
 						if pt[2] in nodesWritten: continue #Already written to output
 
 						nid = idAssignment.AssignId("node", pt[2])
+
 						out.append(u"<node id='{0}' timestamp='2006-11-30T00:03:33Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' lat='{1}' lon='{2}'>\n".format(nid, pt[0], pt[1]))
 						if writeOldPos:
 							out.append(u"<tag k='_old_lat' v='{0}' />\n".format(pt[0]))
@@ -165,153 +246,168 @@ class ApiMap(object):
 						nodesWritten.add(pt[2])
 						nodePosDb[nid] = pt
 
-		#Write ways
-		for objType in ["ways"]:
-			objDict = area[objType]
-			for objId in objDict:
-				objShapes, objData = objDict[objId]
-				shape = objShapes[0]
-				outer, inners = shape
-				oid = idAssignment.AssignId("way", objId, "o")
-
-				objBbox = [None, None, None, None]
-				
-				out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(oid))
-				for pt in outer:
-					nid = idAssignment.AssignId("node", pt[2])
-					out.append(u"<nd ref='{0}' />\n".format(nid))
-					UpdateBbox(objBbox, nodePosDb[nid]) #Determine bbox for way
-				for key in objData:
-					out.append(u"<tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
-				if writeOldPos:
-					out.append(u"<tag k='_old_left' v='{0}' />\n".format(objBbox[0]))
-					out.append(u"<tag k='_old_bottom' v='{0}' />\n".format(objBbox[1]))
-					out.append(u"<tag k='_old_right' v='{0}' />\n".format(objBbox[2]))
-					out.append(u"<tag k='_old_top' v='{0}' />\n".format(objBbox[3]))
-				out.append(u"</way>\n")
-
-		areaIdMap = {}
-		areaUuidMap = {}
-
-		#Write way for areas if no inner ways are present
-		for objType in ["areas"]:
-			objDict = area[objType]
-			for objId in objDict:
-				objShapes, objData = objDict[objId]
-				shape = objShapes[0]
-				outer, inners = shape
-				if len(inners) != 0: continue
-
-				#Write outer way
-				objBbox = [None, None, None, None]
-				oid = idAssignment.AssignId("way", objId)
-				out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(oid))
-				for pt in outer:
-					nid = idAssignment.AssignId("node", pt[2])
-					out.append(u"<nd ref='{0}' />\n".format(nid))
-					UpdateBbox(objBbox, nodePosDb[nid]) #Determine bbox for way
-				nid = idAssignment.AssignId("node", outer[0][2]) #Close area
-				out.append(u"<nd ref='{0}' />\n".format(nid))
-				out.append(u"  <tag k='area' v='yes' />\n")
-				for key in objData:
-					out.append(u"  <tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
-
-				if writeOldPos:
-					out.append(u"<tag k='_old_left' v='{0}' />\n".format(objBbox[0]))
-					out.append(u"<tag k='_old_bottom' v='{0}' />\n".format(objBbox[1]))
-					out.append(u"<tag k='_old_right' v='{0}' />\n".format(objBbox[2]))
-					out.append(u"<tag k='_old_top' v='{0}' />\n".format(objBbox[3]))
-
-				out.append(u"</way>\n")
-
-				areaBboxDict[oid] = objBbox
-
-		#Write ways for areas if inner ways are present
-		for objType in ["areas"]:
-			objDict = area[objType]
-			for objId in objDict:
-				objShapes, objData = objDict[objId]
-				shape = objShapes[0]
-				outer, inners = shape
-				if len(inners) == 0: continue
-
-				#Write outer way
-				objBbox = [None, None, None, None]		
-				oid = idAssignment.AssignId("way", objId, "o")
-				out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(oid))
-				wayOuterId = oid
-				for pt in outer:
-					nid = idAssignment.AssignId("node", pt[2])
-					out.append(u"<nd ref='{0}' />\n".format(nid))
-					UpdateBbox(objBbox, nodePosDb[nid]) #Determine bbox for way
-				nid = idAssignment.AssignId("node", outer[0][2]) #Close area
-				out.append(u"<nd ref='{0}' />\n".format(nid))
-
-				areaBbox = objBbox[:]
-
-				if writeOldPos:
-					out.append(u"<tag k='_old_left' v='{0}' />\n".format(objBbox[0]))
-					out.append(u"<tag k='_old_bottom' v='{0}' />\n".format(objBbox[1]))
-					out.append(u"<tag k='_old_right' v='{0}' />\n".format(objBbox[2]))
-					out.append(u"<tag k='_old_top' v='{0}' />\n".format(objBbox[3]))
-
-				out.append(u"</way>\n")
-
-				#Writer inner ways
-				wayInnersIds = []
-				if inners is not None:
-					for i, inner in enumerate(inners):
-						objBbox = [None, None, None, None]
-						oid = idAssignment.AssignId("way", objId, "i{0}".format(i))
-						out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' inner='1'>\n".format(oid))
-						wayInnersIds.append(oid)
+					if inners is None: continue
+					for inner in inners:
 						for pt in inner:
+							if pt[2] in nodesWritten: continue #Already written to output
+
 							nid = idAssignment.AssignId("node", pt[2])
-							out.append(u"<nd ref='{0}' />\n".format(nid))
-							UpdateBbox(objBbox, nodePosDb[nid]) #Determine bbox for way
-							UpdateBbox(areaBbox, nodePosDb[nid])
-						nid = idAssignment.AssignId("node", inner[0][2]) #Close area
-						out.append(u"<nd ref='{0}' />\n".format(nid))
+							out.append(u"<node id='{0}' timestamp='2006-11-30T00:03:33Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' lat='{1}' lon='{2}'>\n".format(nid, pt[0], pt[1]))
+							if writeOldPos:
+								out.append(u"<tag k='_old_lat' v='{0}' />\n".format(pt[0]))
+								out.append(u"<tag k='_old_lon' v='{0}' />\n".format(pt[1]))
+							out.append(u"</node>\n")
 
-						if writeOldPos:
-							out.append(u"<tag k='_old_left' v='{0}' />\n".format(objBbox[0]))
-							out.append(u"<tag k='_old_bottom' v='{0}' />\n".format(objBbox[1]))
-							out.append(u"<tag k='_old_right' v='{0}' />\n".format(objBbox[2]))
-							out.append(u"<tag k='_old_top' v='{0}' />\n".format(objBbox[3]))
+							nodesWritten.add(pt[2])
+							nodePosDb[nid] = pt
 
-						out.append(u"</way>\n")			
+			#Write ways
+			for objType in ["ways"]:
+				objDict = area[objType]
+				for objId in objDict:
+					objShapes, objData = objDict[objId]
+					shape = objShapes[0]
+					outer, inners = shape
+					oid = idAssignment.AssignId("way", objId, "o")
+
+					objBbox = [None, None, None, None]
 				
-				areaUuidMap[objId] = (wayOuterId, wayInnersIds)
-				areaBboxDict[objId] = areaBbox
+					out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(oid))
+					for pt in outer:
+						nid = idAssignment.AssignId("node", pt[2])
+						out.append(u"<nd ref='{0}' />\n".format(nid))
+						UpdateBbox(objBbox, nodePosDb[nid]) #Determine bbox for way
+					for key in objData:
+						out.append(u"<tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
+					if writeOldPos:
+						out.append(u"<tag k='_old_left' v='{0}' />\n".format(objBbox[0]))
+						out.append(u"<tag k='_old_bottom' v='{0}' />\n".format(objBbox[1]))
+						out.append(u"<tag k='_old_right' v='{0}' />\n".format(objBbox[2]))
+						out.append(u"<tag k='_old_top' v='{0}' />\n".format(objBbox[3]))
+					out.append(u"</way>\n")
 
-		#Tie together multipolygons with relations
-		for objType in ["areas"]:
-			objDict = area[objType]
-			for objId in objDict:
-				objShapes, objData = objDict[objId]
-				shape = objShapes[0]
-				outer, inners = shape
-				if len(inners) == 0: continue
-				wayOuterId, wayInnerIds = areaUuidMap[objId]
+			areaIdMap = {}
+			areaUuidMap = {}
 
-				oid = idAssignment.AssignId("relation", objId)
-				out.append(u"<relation id='{0}' timestamp='2008-03-10T17:43:07Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(
-					oid))
-				out.append(u"  <member type='way' ref='{0}' role='outer' />\n".format(wayOuterId))
-				for wid in wayInnerIds:
-					out.append(u"  <member type='way' ref='{0}' role='inner' />\n".format(wid))
-				out.append(u"  <tag k='type' v='multipolygon' />\n")
-				for key in objData:
-					out.append(u"  <tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
+			#Write way for areas if no inner ways are present
+			for objType in ["areas"]:
+				objDict = area[objType]
+				for objId in objDict:
+					objShapes, objData = objDict[objId]
+					shape = objShapes[0]
+					outer, inners = shape
+					if len(inners) != 0: continue
 
-				areaBbox = areaBboxDict[objId]
-				if writeOldPos:
-					out.append(u"<tag k='_old_left' v='{0}' />\n".format(areaBbox[0]))
-					out.append(u"<tag k='_old_bottom' v='{0}' />\n".format(areaBbox[1]))
-					out.append(u"<tag k='_old_right' v='{0}' />\n".format(areaBbox[2]))
-					out.append(u"<tag k='_old_top' v='{0}' />\n".format(areaBbox[3]))			
+					#Write outer way
+					objBbox = [None, None, None, None]
+					oid = idAssignment.AssignId("way", objId)
+					out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(oid))
+					for pt in outer:
+						nid = idAssignment.AssignId("node", pt[2])
+						out.append(u"<nd ref='{0}' />\n".format(nid))
+						UpdateBbox(objBbox, nodePosDb[nid]) #Determine bbox for way
+					nid = idAssignment.AssignId("node", outer[0][2]) #Close area
+					out.append(u"<nd ref='{0}' />\n".format(nid))
+					out.append(u"  <tag k='area' v='yes' />\n")
+					for key in objData:
+						out.append(u"  <tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
 
-				out.append(u"</relation>\n")
+					if writeOldPos:
+						out.append(u"<tag k='_old_left' v='{0}' />\n".format(objBbox[0]))
+						out.append(u"<tag k='_old_bottom' v='{0}' />\n".format(objBbox[1]))
+						out.append(u"<tag k='_old_right' v='{0}' />\n".format(objBbox[2]))
+						out.append(u"<tag k='_old_top' v='{0}' />\n".format(objBbox[3]))
+
+					out.append(u"</way>\n")
+
+					areaBboxDict[oid] = objBbox
+
+			#Write ways for areas if inner ways are present
+			for objType in ["areas"]:
+				objDict = area[objType]
+				for objId in objDict:
+					objShapes, objData = objDict[objId]
+					shape = objShapes[0]
+					outer, inners = shape
+					if len(inners) == 0: continue
+
+					#Write outer way
+					objBbox = [None, None, None, None]		
+					oid = idAssignment.AssignId("way", objId, "o")
+					out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(oid))
+					wayOuterId = oid
+					for pt in outer:
+						nid = idAssignment.AssignId("node", pt[2])
+						out.append(u"<nd ref='{0}' />\n".format(nid))
+						UpdateBbox(objBbox, nodePosDb[nid]) #Determine bbox for way
+					nid = idAssignment.AssignId("node", outer[0][2]) #Close area
+					out.append(u"<nd ref='{0}' />\n".format(nid))
+
+					areaBbox = objBbox[:]
+
+					if writeOldPos:
+						out.append(u"<tag k='_old_left' v='{0}' />\n".format(objBbox[0]))
+						out.append(u"<tag k='_old_bottom' v='{0}' />\n".format(objBbox[1]))
+						out.append(u"<tag k='_old_right' v='{0}' />\n".format(objBbox[2]))
+						out.append(u"<tag k='_old_top' v='{0}' />\n".format(objBbox[3]))
+
+					out.append(u"</way>\n")
+
+					#Writer inner ways
+					wayInnersIds = []
+					if inners is not None:
+						for i, inner in enumerate(inners):
+							objBbox = [None, None, None, None]
+							oid = idAssignment.AssignId("way", objId, "i{0}".format(i))
+							out.append(u"<way id='{0}' timestamp='2011-12-14T18:14:58Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1' inner='1'>\n".format(oid))
+							wayInnersIds.append(oid)
+							for pt in inner:
+								nid = idAssignment.AssignId("node", pt[2])
+								out.append(u"<nd ref='{0}' />\n".format(nid))
+								UpdateBbox(objBbox, nodePosDb[nid]) #Determine bbox for way
+								UpdateBbox(areaBbox, nodePosDb[nid])
+							nid = idAssignment.AssignId("node", inner[0][2]) #Close area
+							out.append(u"<nd ref='{0}' />\n".format(nid))
+
+							if writeOldPos:
+								out.append(u"<tag k='_old_left' v='{0}' />\n".format(objBbox[0]))
+								out.append(u"<tag k='_old_bottom' v='{0}' />\n".format(objBbox[1]))
+								out.append(u"<tag k='_old_right' v='{0}' />\n".format(objBbox[2]))
+								out.append(u"<tag k='_old_top' v='{0}' />\n".format(objBbox[3]))
+
+							out.append(u"</way>\n")			
+				
+					areaUuidMap[objId] = (wayOuterId, wayInnersIds)
+					areaBboxDict[objId] = areaBbox
+
+			#Tie together multipolygons with relations
+			for objType in ["areas"]:
+				objDict = area[objType]
+				for objId in objDict:
+					objShapes, objData = objDict[objId]
+					shape = objShapes[0]
+					outer, inners = shape
+					if len(inners) == 0: continue
+					wayOuterId, wayInnerIds = areaUuidMap[objId]
+
+					oid = idAssignment.AssignId("relation", objId)
+					out.append(u"<relation id='{0}' timestamp='2008-03-10T17:43:07Z' uid='1' user='ZiggDb' visible='true' version='1' changeset='1'>\n".format(
+						oid))
+					out.append(u"  <member type='way' ref='{0}' role='outer' />\n".format(wayOuterId))
+					for wid in wayInnerIds:
+						out.append(u"  <member type='way' ref='{0}' role='inner' />\n".format(wid))
+					out.append(u"  <tag k='type' v='multipolygon' />\n")
+					for key in objData:
+						out.append(u"  <tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
+
+					areaBbox = areaBboxDict[objId]
+					if writeOldPos:
+						out.append(u"<tag k='_old_left' v='{0}' />\n".format(areaBbox[0]))
+						out.append(u"<tag k='_old_bottom' v='{0}' />\n".format(areaBbox[1]))
+						out.append(u"<tag k='_old_right' v='{0}' />\n".format(areaBbox[2]))
+						out.append(u"<tag k='_old_top' v='{0}' />\n".format(areaBbox[3]))			
+
+					out.append(u"</relation>\n")
 
 
 		out.append(u"</osm>\n")
