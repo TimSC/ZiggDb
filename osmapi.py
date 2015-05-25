@@ -163,6 +163,8 @@ def ZiggToOsm(idAssignment, area):
 def OsmToZigg(idAssignment, osmData):
 	area = {"nodes": {}, "ways": {}, "areas": {}}
 	ziggAreas = area["areas"]
+	ziggWays = area["ways"]
+	ziggNodes = area["nodes"]
 	accounted = {"node": set(), "way": set(), "relation": set()}
 
 	#Relations to areas
@@ -170,6 +172,7 @@ def OsmToZigg(idAssignment, osmData):
 		objMems, objData = osmData["relation"][oid]
 		if oid > 0:
 			relUuid = idAssignment.GetUuidFromId("relation", oid)
+			if relUuid is None: raise ValueError("Unknown relation")
 		else:
 			relUuid = oid
 
@@ -186,6 +189,7 @@ def OsmToZigg(idAssignment, osmData):
 				ptShape, ptData = osmData["node"][pt]
 				if pt > 0:
 					ptUuid = idAssignment.GetUuidFromId("node", pt)
+					if ptUuid is None: raise ValueError("Unknown node")
 				else:
 					ptUuid = pt
 				wayShape.append([ptShape[0], ptShape[1], ptUuid])
@@ -198,17 +202,53 @@ def OsmToZigg(idAssignment, osmData):
 				outers.append(wayShape)
 			accounted["way"].add(memId)
 	
-		if len(outers) != 1:
-			raise ValueError("Area must have one outer way")
+		if len(outers) > 1:
+			raise ValueError("Multiple outer ways not implemented")
+		if len(outers) == 0:
+			raise ValueError("No outer way defined")
 		objDataCopy = objData.copy()
 		del objDataCopy["type"]
 		ziggAreas[relUuid] = [[[outers[0], inners]], objDataCopy]
 		accounted["relation"].add(oid)
 
 	#Process remaining ways
+	for oid in osmData["way"]:
+		if oid in accounted["way"]: continue
+		objMems, objData = osmData["way"][oid]
+		if oid > 0:
+			wayUuid = idAssignment.GetUuidFromId("way", oid)
+			if wayUuid is None: raise ValueError("Unknown way")
+		else:
+			wayUuid = oid
+		
+		wayShape = []
+		for pt in objMems:
+			ptShape, ptData = osmData["node"][pt]
+			if pt > 0:
+				ptUuid = idAssignment.GetUuidFromId("node", pt)
+				if ptUuid is None: raise ValueError("Unknown node")
+			else:
+				ptUuid = pt
+			wayShape.append([ptShape[0], ptShape[1], ptUuid])
+			if len(ptData) == 0:
+				accounted["node"].add(pt)
+
+		ziggWays[wayUuid] = [[[wayShape, None]], objData]
+		accounted["way"].add(oid)
 
 	#Process remaining nodes
-	
+	for oid in osmData["node"]:
+		if oid in accounted["node"]: continue
+		pt, objData = osmData["node"][oid]
+		if oid > 0:
+			nodeUuid = idAssignment.GetUuidFromId("node", oid)
+			if nodeUuid is None: raise ValueError("Unknown node")
+		else:
+			nodeUuid = oid
+
+		ziggNodes[nodeUuid] = [[[[pt], None]], objData]
+		accounted["node"].add(oid)
+
 	return area
 
 class ApiMap(object):
@@ -241,9 +281,6 @@ class ApiMap(object):
 			bbox[1], bbox[0], bbox[3], bbox[2]))
 
 		osmData = ZiggToOsm(idAssignment, area)
-	
-		#DEBUG
-		areaTest = OsmToZigg(idAssignment, osmData)
 
 		#Write individual nodes to output
 		for nid in osmData["node"]:
@@ -271,7 +308,7 @@ class ApiMap(object):
 				out.append(u"<tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
 			out.append(u"</way>\n")
 
-		#Tie together multipolygons with relations
+		#Write relations
 		for oid in osmData["relation"]:
 			objMembers, objData = osmData["relation"][oid]
 
