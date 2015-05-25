@@ -155,9 +155,61 @@ def ZiggToOsm(idAssignment, area):
 		relationMembers = [[wayOuterId, "outer", "way"]]
 		for wi in wayInnersIds:
 			relationMembers.append([wi, "inner", "way"])
+		objData["type"] = "multipolygon"
 		osmRelations[oid] = (relationMembers, objData)
 
 	return osmData
+
+def OsmToZigg(idAssignment, osmData):
+	area = {"nodes": {}, "ways": {}, "areas": {}}
+	ziggAreas = area["areas"]
+	accounted = {"node": set(), "way": set(), "relation": set()}
+
+	#Relations to areas
+	for oid in osmData["relation"]:
+		objMems, objData = osmData["relation"][oid]
+		if oid > 0:
+			relUuid = idAssignment.GetUuidFromId("relation", oid)
+		else:
+			relUuid = oid
+
+		if "type" not in objData or objData["type"] != "multipolygon":
+			continue
+		outers = []
+		inners = []
+		for memId, memRole, memType in objMems:
+			if memType != "way": continue
+
+			wayMems, wayData = osmData["way"][memId]
+			wayShape = []
+			for pt in wayMems:
+				ptShape, ptData = osmData["node"][pt]
+				if pt > 0:
+					ptUuid = idAssignment.GetUuidFromId("node", pt)
+				else:
+					ptUuid = pt
+				wayShape.append([ptShape[0], ptShape[1], ptUuid])
+				if len(ptData) == 0:
+					accounted["node"].add(pt)
+				
+			if memRole == "inner":
+				inners.append(wayShape)
+			if memRole == "outer":
+				outers.append(wayShape)
+			accounted["way"].add(memId)
+	
+		if len(outers) != 1:
+			raise ValueError("Area must have one outer way")
+		objDataCopy = objData.copy()
+		del objDataCopy["type"]
+		ziggAreas[relUuid] = [[[outers[0], inners]], objDataCopy]
+		accounted["relation"].add(oid)
+
+	#Process remaining ways
+
+	#Process remaining nodes
+	
+	return area
 
 class ApiMap(object):
 	def GET(self):
@@ -189,6 +241,9 @@ class ApiMap(object):
 			bbox[1], bbox[0], bbox[3], bbox[2]))
 
 		osmData = ZiggToOsm(idAssignment, area)
+	
+		#DEBUG
+		areaTest = OsmToZigg(idAssignment, osmData)
 
 		#Write individual nodes to output
 		for nid in osmData["node"]:
