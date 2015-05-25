@@ -523,6 +523,8 @@ class ZiggDb(object):
 
 	def SetArea(self, area, userInfo, debug = None):
 		#=Validate input=
+		if "active" not in area:
+			raise ValueError("No active area specified")
 
 		#Get active area
 		bbox = area["active"]

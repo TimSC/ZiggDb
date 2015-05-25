@@ -93,7 +93,7 @@ def ZiggToOsm(idAssignment, area):
 		pt = outer[0]
 		nid = idAssignment.AssignId("node", nodeId)
 
-		osmNodes[nid] = (pt, objData)
+		osmNodes[nid] = (pt[:2], objData)
 
 	#Write nodes that are part of other objects
 	for objType in ["ways", "areas"]:
@@ -105,14 +105,14 @@ def ZiggToOsm(idAssignment, area):
 			for pt in outer:
 				nodeId = pt[2]
 				nid = idAssignment.AssignId("node", nodeId)
-				osmNodes[nid] = (pt, {})
+				osmNodes[nid] = (pt[:2], {})
 
 			if inners is None: continue
 			for inner in inners:
 				for pt in inner:
 					nodeId = pt[2]
 					nid = idAssignment.AssignId("node", nodeId)
-					osmNodes[nid] = (pt, {})
+					osmNodes[nid] = (pt[:2], {})
 
 	#Write ways
 	for objId in area["ways"]:
@@ -208,6 +208,8 @@ def OsmToZigg(idAssignment, osmData):
 			raise ValueError("No outer way defined")
 		objDataCopy = objData.copy()
 		del objDataCopy["type"]
+		#TODO validate areas are ok (inner polygons are within outer polygon)
+
 		ziggAreas[relUuid] = [[[outers[0], inners]], objDataCopy]
 		accounted["relation"].add(oid)
 
@@ -246,7 +248,7 @@ def OsmToZigg(idAssignment, osmData):
 		else:
 			nodeUuid = oid
 
-		ziggNodes[nodeUuid] = [[[[pt], None]], objData]
+		ziggNodes[nodeUuid] = [[[[[pt[0], pt[1], nodeUuid]], None]], objData]
 		accounted["node"].add(oid)
 
 	return area
@@ -281,6 +283,9 @@ class ApiMap(object):
 			bbox[1], bbox[0], bbox[3], bbox[2]))
 
 		osmData = ZiggToOsm(idAssignment, area)
+
+		#Debug code
+		OsmToZigg(idAssignment, osmData)
 
 		#Write individual nodes to output
 		for nid in osmData["node"]:
@@ -317,7 +322,6 @@ class ApiMap(object):
 			for memId, memRole, memType in objMembers:
 				out.append(u"  <member type='{2}' ref='{0}' role='{1}' />\n".format(memId, escape(memRole), memType))
 
-			out.append(u"  <tag k='type' v='multipolygon' />\n")
 			for key in objData:
 				out.append(u"  <tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
 			out.append(u"</relation>\n")
@@ -592,7 +596,7 @@ class ApiChangesetUpload(object):
 		activeData = ziggDb.GetArea(activeArea)
 
 		#Convert active area to osm style representation
-		
+		osmData = ZiggToOsm(idAssignment, activeData)
 
 		if logging:
 			fi.write("Active area nodes {0}\n".format(len(activeData["nodes"])))
@@ -610,7 +614,6 @@ class ApiChangesetUpload(object):
 			if method == "create":
 
 				#Extract new nodes
-				
 				for el in meth:
 					if el.tag != "node": continue
 					objId = int(el.attrib["id"])
@@ -627,8 +630,8 @@ class ApiChangesetUpload(object):
 					
 				#Apply change to database
 				for nid in newNodes:
-					pos = newNodes[nid]
-					activeData["nodes"][nid] = [[[[[pos[0], pos[1], nid]], None]], pos[2]]
+					objLat, objLon, tagDict = newNodes[nid]
+					osmData["node"][nid] = [(objLat, objLon, nid), tagDict]
 
 			if method == "modify":
 				
@@ -654,8 +657,8 @@ class ApiChangesetUpload(object):
 
 				#Apply change to database
 				for nid in modNodes:
-					pos = modNodes[nid]
-					activeData["nodes"][nid] = [[[[[pos[0], pos[1], nid]], None]], pos[2]]
+					objLat, objLon, tagDict = modNodes[nid]
+					osmData["node"][nid] = [(objLat, objLon, nid), tagDict]
 
 			if method == "delete":
 				
@@ -678,22 +681,20 @@ class ApiChangesetUpload(object):
 
 				#Apply change to database
 				for nid in delNodes:
-					nuuid = idAssignment.GetUuidFromId("node", nid)	
-					if nuuid not in activeData["nodes"] and logging:
-						fi.write("Missing node {0} in delete action\n".format([nuuid]))
-					del activeData["nodes"][nuuid]
+					del osmData["node"][nid]
 
 		#Convert OSM representation to zigg based format
+		updatedArea = OsmToZigg(idAssignment, osmData)
 
-
+		#Copy active bbox to updated data
+		updatedArea["active"] = activeArea
+		updatedArea["versionInfo"] = activeData["versionInfo"]
 
 		#Update database with new data
 		userInfo = {}
-		idDiff = ziggDb.SetArea(activeData, userInfo)
+		idDiff = ziggDb.SetArea(updatedArea, userInfo)
 		
-
 		#Return updated IDs to client
-
 		out = []
 		out.append(u'<?xml version="1.0" encoding="UTF-8"?>\n')
 		out.append(u'<diffResult generator="ZiggDb" version="0.6">\n')

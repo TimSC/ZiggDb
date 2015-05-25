@@ -15,6 +15,8 @@ def InterpretUploadResponse(response):
 
 def TestMultiObjectEditing(userpass, verbose=0, save=False):
 
+	log = open("log.txt", "wt")
+
 	#Create a changeset
 	createChangeset = "<?xml version='1.0' encoding='UTF-8'?>\n" +\
 	"<osm version='0.6' generator='JOSM'>\n" +\
@@ -46,6 +48,9 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	"</osmChange>\n"
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",create,userpass)
 	if verbose: print response
+	if log is not None: 
+		log.write(response[1])
+		log.write(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating node")
 	#wayId = int(response[0])
 	print response[0]
