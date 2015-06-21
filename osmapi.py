@@ -653,11 +653,11 @@ class ApiChangesetUpload(object):
 						if ch.tag != "tag": continue
 						tagDict[ch.attrib["k"]] = ch.attrib["v"]
 
-					modNodes[nuuid] = [objLat, objLon, tagDict, objVer]
+					modNodes[objId] = [objLat, objLon, tagDict, objVer]
 
 				#Apply change to database
 				for nid in modNodes:
-					objLat, objLon, tagDict = modNodes[nid]
+					objLat, objLon, tagDict, objVer = modNodes[nid]
 					osmData["node"][nid] = [(objLat, objLon, nid), tagDict]
 
 			if method == "delete":
@@ -698,18 +698,23 @@ class ApiChangesetUpload(object):
 		out = []
 		out.append(u'<?xml version="1.0" encoding="UTF-8"?>\n')
 		out.append(u'<diffResult generator="ZiggDb" version="0.6">\n')
-		for nid in newNodes:
+		for nid in idDiff["nodes"]:
 			nuuid = idDiff["nodes"][nid]
+			#oldOld, newNew
 			newId = idAssignment.AssignId("node", nuuid)
-			out.append(u'<node old_id="{0}" new_id="{1}" new_version="{2}"/>\n'.format(nid, newId, 1))
+			modTag = []
+			modTag.append(u'<node old_id="{0}" new_id="{1}"'.format(nid, newId))
+			newVer = 1
+			if newVer is not None:
+				modTag.append(u' new_version="{0}"'.format(newVer))
+			modTag.append(u'/>\n')
+			out.append("".join(modTag))
 
-		for nuuid in modNodes:
+		for nid in modNodes:
 			nodeInfo = modNodes[nid]
-			nid = idAssignment.AssignId("node", nuuid)
 			out.append(u'<node old_id="{0}" new_id="{0}" new_version="{1}"/>\n'.format(nid, nodeInfo[3]+1))
 
-		for nuuid in delNodes:
-			nid = idAssignment.AssignId("node", nuuid)
+		for nid in delNodes:
 			out.append(u'<node old_id="{0}"/>\n'.format(nid))
 
 		out.append(u'</diffResult>\n')
@@ -727,13 +732,12 @@ class ApiChangesetUpload(object):
 			newId = idAssignment.AssignId("node", nuuid)
 			nodePosDb[newId] = [objLat, objLon, nuuid]
 
-		for nuuid in modNodes:	
-			objLat, objLon, tagDict, objVer = modNodes[nuuid]
-			nid = idAssignment.AssignId("node", nuuid)
+		for nid in modNodes:
+			objLat, objLon, tagDict, objVer = modNodes[nid]
+			nuuid = idAssignment.GetUuidFromId("node", nid)
 			nodePosDb[nid] = [objLat, objLon, nuuid]
 
-		for nuuid in delNodes:	
-			nid = idAssignment.AssignId("node", nuuid)
+		for nid in delNodes:
 			del nodePosDb[nid]
 
 		#newNodePosDict[nid] = pos

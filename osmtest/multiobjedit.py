@@ -17,6 +17,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 
 	log = open("log.txt", "wt")
 
+	if verbose>=1: print "Open changeset"
 	#Create a changeset
 	createChangeset = "<?xml version='1.0' encoding='UTF-8'?>\n" +\
 	"<osm version='0.6' generator='JOSM'>\n" +\
@@ -27,13 +28,14 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	"</osm>\n"
 
 	response = Put(conf.baseurl+"/0.6/changeset/create",createChangeset,userpass)
-	if verbose: print response
+	if verbose>=2: print response
 	cid = int(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating changeset")
 
 	lat = 51.25022331526812
 	lon = -0.6042092878597837
 
+	if verbose>=1: print "Create way between two nodes"
 	#Create a way between two nodes
 	create = "<?xml version='1.0' encoding='UTF-8'?>\n" +\
 	"<osmChange version='0.6' generator='JOSM'>\n" +\
@@ -47,7 +49,8 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	"</create>\n" +\
 	"</osmChange>\n"
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",create,userpass)
-	if verbose: print response
+	if verbose>=2: print response
+	if save: open("add.html", "wt").write(response[0])
 	if log is not None: 
 		log.write(response[1])
 		log.write(response[0])
@@ -59,23 +62,26 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	nodeId1 = diff["node"][-289]["new_id"]
 	nodeId2 = diff["node"][-2008]["new_id"]
 
+	if verbose>=1: print "Close changeset"
 	#Close the changeset
 	response = Put(conf.baseurl+"/0.6/changeset/"+str(cid)+"/close","",userpass)
-	if verbose: print response
+	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
 
 	if 0:
 		#Read back node
 		response = Get(conf.baseurl+"/0.6/node/"+str(nodeId1))
-		if verbose: print response
+		if verbose>=2: print response
 		if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error reading back node")
 
+	if verbose>=1: print "Open changeset"
 	#Open another changeset
 	response = Put(conf.baseurl+"/0.6/changeset/create",createChangeset,userpass)
-	if verbose: print response
+	if verbose>=2: print response
 	cid = int(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating changset")
 
+	if verbose>=1: print "Modify a node", nodeId1
 	#Modify test node
 	lat = 51.25
 	lon = -0.60
@@ -85,18 +91,19 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	"</modify>\n"+\
 	"</osmChange>\n"
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",modifyNode,userpass)
-	if verbose: print response
+	if verbose>=2: print response
 	if save: open("mod.html", "wt").write(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error modifying node")
 
+	if verbose>=1: print "Close changeset"
 	#Close changeset
 	response = Put(conf.baseurl+"/0.6/changeset/"+str(cid)+"/close","",userpass)
-	if verbose: print response
+	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
 
 	#Open changeset
 	response = Put(conf.baseurl+"/0.6/changeset/create",createChangeset,userpass)
-	if verbose: print response
+	if verbose>=2: print response
 	cid = int(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating changset")
 
@@ -107,7 +114,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	"</osmChange>\n"
 
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteWay,userpass)
-	if verbose: print response
+	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
 
 	deleteNode = '<osmChange version="0.6" generator="JOSM">' +\
@@ -117,7 +124,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	"</delete>\n"+\
 	"</osmChange>\n"
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteNode,userpass)
-	if verbose: print response
+	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
 
 	deleteNode = '<osmChange version="0.6" generator="JOSM">' +\
@@ -127,7 +134,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	"</delete>\n"+\
 	"</osmChange>\n"
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteNode,userpass)
-	if verbose: print response
+	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
 
 	#Delete a non-existant node
@@ -144,14 +151,14 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 
 	#Close changeset
 	response = Put(conf.baseurl+"/0.6/changeset/"+str(cid)+"/close","",userpass)
-	if verbose: print response
+	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
 
 	return (1,"OK")
 
 	#Attempt to read deleted node
 	response = Get(conf.baseurl+"/0.6/node/"+str(nodeId))
-	if verbose: print response
+	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 410 Gone": 
 		return (0,"Error deleted node had wrong header code")
 	if response[0] != "":#"The node with the id "+str(nodeId)+" has already been deleted":
