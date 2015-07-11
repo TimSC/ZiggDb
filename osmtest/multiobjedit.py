@@ -5,6 +5,8 @@ import xml.etree.ElementTree as ET
 
 def InterpretUploadResponse(response):
 	root = ET.fromstring(response)
+	if root.tag == "html":
+		raise RuntimeError("Unexpected html in response")
 	diff = {"node": {}, "way": {}, "relation": {}}
 	for el in root:
 		val = {}
@@ -55,7 +57,6 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 		log.write(response[1])
 		log.write(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating node")
-	print response[0]
 	
 	diff = InterpretUploadResponse(response[0])
 	nodeId1 = diff["node"][-289]["new_id"]
@@ -94,6 +95,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if verbose>=2: print response
 	if save: open("mod.html", "wt").write(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error modifying node")
+	diff = InterpretUploadResponse(response[0])
 
 	if verbose>=1: print "Close changeset"
 	#Close changeset
@@ -102,19 +104,24 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
 
 	#Open changeset
+	if verbose>=1: print "Open changeset"
 	response = Put(conf.baseurl+"/0.6/changeset/create",createChangeset,userpass)
 	if verbose>=2: print response
 	cid = int(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating changset")
 
+	if verbose>=1: print "Delete way"
 	deleteWay = '<osmChange version="0.6" generator="JOSM">'+"\n"+\
 	"<delete>\n"+\
 	"  <way id='"+str(wayId)+"' version='1' changeset='"+str(cid)+"'/>\n"+\
 	"</delete>\n"+\
 	"</osmChange>\n"
 
+	if verbose>=1: print "Delete node"
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteWay,userpass)
 	if verbose>=2: print response
+	diff = InterpretUploadResponse(response[0])
+	
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
 
 	deleteNode = '<osmChange version="0.6" generator="JOSM">' +\
@@ -126,7 +133,9 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteNode,userpass)
 	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
+	diff = InterpretUploadResponse(response[0])
 
+	if verbose>=1: print "Delete another node"
 	deleteNode = '<osmChange version="0.6" generator="JOSM">' +\
 	"<delete>\n" +\
 	"  <node id='"+str(nodeId2)+"' version='1' "+\
@@ -136,6 +145,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteNode,userpass)
 	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
+	diff = InterpretUploadResponse(response[0])
 
 	#Delete a non-existant node
 	#nonExistId = 999999999999999
@@ -148,8 +158,10 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	#response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteNode,userpass)
 	#if verbose: print response
 	#if HeaderResponseCode(response[1]) != "HTTP/1.1 409 Conflict": return (0,"Error deleting node")
+	#diff = InterpretUploadResponse(response[0])
 
 	#Close changeset
+	if verbose>=1: print "Close changeset"
 	response = Put(conf.baseurl+"/0.6/changeset/"+str(cid)+"/close","",userpass)
 	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
