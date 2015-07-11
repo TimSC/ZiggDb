@@ -1,4 +1,4 @@
-import cPickle, uuid, slippy, os, copy
+import cPickle, uuid, slippy, os, copy, exceptions
 
 def CheckRectOverlap(rect1, rect2):
 	#left,bottom,right,top
@@ -370,7 +370,10 @@ class ZiggDb(object):
 	def GetArea(self, bbox):
 		if len(bbox) != 4: 
 			raise ValueError("bbox should have 4 values")
-		bbox = map(float, bbox)
+		try:
+			bbox = map(float, bbox)
+		except exceptions.TypeError:
+			raise TypeError("Invalid type in bbox")
 
 		if bbox[0] > bbox[2] or bbox[1] > bbox[3]:
 			raise ValueError("Invalid bbox")
@@ -444,11 +447,13 @@ class ZiggDb(object):
 			del objDict[k]
 
 	def _CheckUuidsAlreadyExist(self, newObjsDict, existingObjsDict):
+		missing = []
 		for objId in newObjsDict:
 			#Integers are allowed
 			if isinstance(objId, int): continue
 			if objId not in existingObjsDict:
-				raise ValueError("Unknown UUID referenced")
+				missing.append(objId)
+		return missing
 
 	def _ValidateUuid(self, i):
 		if isinstance(i, int):
@@ -545,9 +550,11 @@ class ZiggDb(object):
 			raise ValueError("Version info does not match")
 		
 		#Check no UUIDs have been invented by the client
-		self._CheckUuidsAlreadyExist(newArea["nodes"], currentArea["nodes"])
-		self._CheckUuidsAlreadyExist(newArea["ways"], currentArea["ways"])
-		self._CheckUuidsAlreadyExist(newArea["areas"], currentArea["areas"])
+		missingN = self._CheckUuidsAlreadyExist(newArea["nodes"], currentArea["nodes"])
+		missingW = self._CheckUuidsAlreadyExist(newArea["ways"], currentArea["ways"])
+		missingA = self._CheckUuidsAlreadyExist(newArea["areas"], currentArea["areas"])
+		if len(missingN)>0 or len(missingW)>0 or len(missingA)>0:
+			raise ValueError("Input makes reference to non-existent objects")
 
 		#Check nodes only have one position
 		for nodeId in newArea["nodes"]:

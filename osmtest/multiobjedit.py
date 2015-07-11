@@ -82,7 +82,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	cid = int(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating changset")
 
-	if verbose>=1: print "Modify a node", nodeId1
+	if verbose>=1: print "Modify a node with id:", nodeId1
 	#Modify test node
 	lat = 51.25
 	lon = -0.60
@@ -117,13 +117,15 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	"</delete>\n"+\
 	"</osmChange>\n"
 
-	if verbose>=1: print "Delete node"
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteWay,userpass)
 	if verbose>=2: print response
+	if save: open("mod.html", "wt").write(response[0])
 	diff = InterpretUploadResponse(response[0])
+	print response[0]
 	
-	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting way")
 
+	if verbose>=1: print "Delete node"
 	deleteNode = '<osmChange version="0.6" generator="JOSM">' +\
 	"<delete>\n" +\
 	"  <node id='"+str(nodeId1)+"' version='2' "+\
@@ -132,6 +134,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	"</osmChange>\n"
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteNode,userpass)
 	if verbose>=2: print response
+	if save: open("mod.html", "wt").write(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
 	diff = InterpretUploadResponse(response[0])
 
@@ -144,6 +147,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	"</osmChange>\n"
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteNode,userpass)
 	if verbose>=2: print response
+	if save: open("mod.html", "wt").write(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
 	diff = InterpretUploadResponse(response[0])
 
@@ -157,6 +161,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	#"</osmChange>\n"
 	#response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteNode,userpass)
 	#if verbose: print response
+	#if save: open("mod.html", "wt").write(response[0])
 	#if HeaderResponseCode(response[1]) != "HTTP/1.1 409 Conflict": return (0,"Error deleting node")
 	#diff = InterpretUploadResponse(response[0])
 

@@ -270,6 +270,7 @@ class ApiMap(object):
 		webInput = web.input()
 		ziggDb = web.ctx.ziggDb
 		nodePosDb = web.ctx.nodePosDb
+		wayDb = web.ctx.wayDb
 		idAssignment = IdAssignment()
 		writeOldPos = False
 
@@ -312,6 +313,8 @@ class ApiMap(object):
 			for key in objData:
 				out.append(u"<tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
 			out.append(u"</way>\n")
+
+			wayDb[oid] = nodeIds
 
 		#Write relations
 		for oid in osmData["relation"]:
@@ -496,8 +499,8 @@ class ApiChangesetUpload(object):
 	def Render(self, cid):
 		idAssignment = IdAssignment()
 		webData = web.data()
-		nodeCount = 100
 		nodePosDb = web.ctx.nodePosDb
+		wayDb = web.ctx.wayDb
 		ziggDb = web.ctx.ziggDb
 
 		activeArea = [None, None, None, None]
@@ -513,7 +516,6 @@ class ApiChangesetUpload(object):
 			fi.write(str(cid)+"\n")
 			fi.write(str(web.ctx.env.copy())+"\n")
 			fi.write(str(web.data())+"\n")
-
 
 		#Preprocess data to determine active area
 		root = ET.fromstring(webData)
@@ -544,21 +546,23 @@ class ApiChangesetUpload(object):
 					if ch.tag != "tag": continue
 					tagDict[ch.attrib["k"]] = ch.attrib["v"]
 
-				#Get hints from tags on active area
-				if "_old_bottom" in tagDict and "_old_left" in tagDict:
-					UpdateBbox(activeArea, [float(tagDict["_old_bottom"]), float(tagDict["_old_left"])])
-				if "_old_top" in tagDict and "_old_right" in tagDict:
-					UpdateBbox(activeArea, [float(tagDict["_old_top"]), float(tagDict["_old_right"])])
-				if "_old_lat" in tagDict and "_old_lon" in tagDict:
-					UpdateBbox(activeArea, [float(tagDict["_old_lat"]), float(tagDict["_old_lon"])])
-
-				#Get way members
+				#Get way members when explicitly listed in upload
 				for ch in el:
 					if ch.tag != "nd": continue
 					nid = int(ch.attrib["ref"])
 					if nid < 0: continue #Ignore negative nodes since they have no original position
 					pos = nodePosDb[nid]
 					UpdateBbox(activeArea, pos)
+
+				#Deleting objects requires us to get the relevant children
+				if method == "delete" and objTy == "way" and objId > 0:
+					if objId not in wayDb:
+						raise RuntimeError("Way not in OSM cache")
+					nodesInWay = wayDb[objId][0]
+
+					for nid in nodesInWay:
+						nPos = nodePosDb[int(nid)]
+						UpdateBbox(activeArea, nPos)
 
 				#Get nodes in relation (not sure if this is really meaningful with incomplete 
 				#implementation - what about ways?)
@@ -592,6 +596,9 @@ class ApiChangesetUpload(object):
 				fi.write("Padded"+str(activeArea)+"\n")
 				fi.flush()
 	
+		if None in activeArea:
+			raise RuntimeError("Invalid bbox")
+
 		#Retrieve active area
 		activeData = ziggDb.GetArea(activeArea)
 
@@ -606,8 +613,8 @@ class ApiChangesetUpload(object):
 
 		#Apply changes to OSM representation of active data
 		newObjs = {'nodes': {}, 'ways': {}}
-		modNodes = {}
-		delNodes = set()
+		modObjs = {'nodes': {}, 'ways': {}}
+		delObjs = {'nodes': set(), 'ways': set()}
 
 		for meth in root:
 			method = meth.tag
@@ -675,15 +682,16 @@ class ApiChangesetUpload(object):
 						if ch.tag != "tag": continue
 						tagDict[ch.attrib["k"]] = ch.attrib["v"]
 
-					modNodes[objId] = [objLat, objLon, tagDict, objVer]
+					modObjs["nodes"][objId] = [objLat, objLon, tagDict, objVer]
 
 				#Apply change to database
-				for nid in modNodes:
-					objLat, objLon, tagDict, objVer = modNodes[nid]
+				for nid in modObjs["nodes"]:
+					objLat, objLon, tagDict, objVer = modObjs["nodes"][nid]
 					osmData["node"][nid] = [(objLat, objLon, nid), tagDict]
 
 			if method == "delete":
 				
+				#Find data that deletes existing nodes
 				for el in meth:
 					if el.tag != "node": continue
 					objId = int(el.attrib["id"])
@@ -699,11 +707,27 @@ class ApiChangesetUpload(object):
 						if ch.tag != "tag": continue
 						tagDict[ch.attrib["k"]] = ch.attrib["v"]
 
-					delNodes.add(objId)
+					delObjs["nodes"].add(objId)
+
+				#Find data that deletes existing ways
+				for el in meth:
+					if el.tag != "way": continue
+					objId = int(el.attrib["id"])
+					if objId < 0: continue
+
+					#Find uuid of way
+					nuuid = idAssignment.GetUuidFromId("way", objId)			
+					if nuuid is None: 
+						raise RuntimeError("Unknown way {0} in upload".format(objId))
+
+					delObjs["ways"].add(objId)
 
 				#Apply change to database
-				for nid in delNodes:
+				for nid in delObjs["nodes"]:
 					del osmData["node"][nid]
+
+				for wid in delObjs["ways"]:
+					del osmData["way"][wid]
 
 		#Convert OSM representation to zigg based format
 		updatedArea = OsmToZigg(idAssignment, osmData)
@@ -743,12 +767,19 @@ class ApiChangesetUpload(object):
 			modTag.append(u'/>\n')
 			out.append("".join(modTag))
 
-		for nid in modNodes:
-			nodeInfo = modNodes[nid]
+		for nid in modObjs["nodes"]:
+			nodeInfo = modObjs["nodes"][nid]
 			out.append(u'<node old_id="{0}" new_id="{0}" new_version="{1}"/>\n'.format(nid, nodeInfo[3]+1))
 
-		for nid in delNodes:
+		for wid in modObjs["ways"]:
+			wayInfo = modObjs["ways"][wid]
+			out.append(u'<ways old_id="{0}" new_id="{0}" new_version="{1}"/>\n'.format(wid, nodeInfo[3]+1))
+
+		for nid in delObjs["nodes"]:
 			out.append(u'<node old_id="{0}"/>\n'.format(nid))
+
+		for wid in delObjs["ways"]:
+			out.append(u'<way old_id="{0}"/>\n'.format(wid))
 
 		out.append(u'</diffResult>\n')
 
@@ -765,13 +796,29 @@ class ApiChangesetUpload(object):
 			newId = idAssignment.AssignId("node", nuuid)
 			nodePosDb[newId] = [objLat, objLon, nuuid]
 
-		for nid in modNodes:
-			objLat, objLon, tagDict, objVer = modNodes[nid]
+		for wid in newObjs["ways"]:
+			memNds, tagDict = newObjs["ways"][wid]
+			nuuid = idDiff["ways"][wid]
+			updatedMemNds = []
+			for nid in memNds:
+				cnuuid = idDiff["nodes"][nid]
+				cnewId = idAssignment.AssignId("node", cnuuid)
+				updatedMemNds.append(cnewId)
+			newId = idAssignment.AssignId("way", nuuid)
+			wayDb[newId] = [updatedMemNds, nuuid]
+
+		for nid in modObjs["nodes"]:
+			objLat, objLon, tagDict, objVer = modObjs["nodes"][nid]
 			nuuid = idAssignment.GetUuidFromId("node", nid)
 			nodePosDb[nid] = [objLat, objLon, nuuid]
 
-		for nid in delNodes:
+		#TODO modify way cache
+
+		for nid in delObjs["nodes"]:
 			del nodePosDb[nid]
+
+		for wid in delObjs["ways"]:
+			del wayDb[wid]
 
 		#newNodePosDict[nid] = pos
 
@@ -890,6 +937,7 @@ def InitDatabaseConn():
 	web.ctx.nodeIdToUuidDb = SqliteDict(os.path.join(curdir, 'data', 'nodeIdToUuidDb.sqlite'), autocommit=True)
 	web.ctx.uuidToNodeIdDb = SqliteDict(os.path.join(curdir, 'data', 'uiidToNodeIdDb.sqlite'), autocommit=True)
 	web.ctx.nodePosDb = SqliteDict(os.path.join(curdir, 'data', 'nodePosDb.sqlite'), autocommit=True)
+	web.ctx.wayDb = SqliteDict(os.path.join(curdir, 'data', 'wayDb.sqlite'), autocommit=True)
 
 	web.ctx.wayIdToUuidDb = SqliteDict(os.path.join(curdir, 'data', 'wayIdToUuidDb.sqlite'), autocommit=True)
 	web.ctx.uuidToWayIdDb = SqliteDict(os.path.join(curdir, 'data', 'uiidToWayIdDb.sqlite'), autocommit=True)
