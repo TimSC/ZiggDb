@@ -314,7 +314,7 @@ class ApiMap(object):
 				out.append(u"<tag k='{0}' v='{1}' />\n".format(escape(key), escape(objData[key])))
 			out.append(u"</way>\n")
 
-			wayDb[oid] = nodeIds
+			wayDb[oid] = [nodeIds, None]
 
 		#Write relations
 		for oid in osmData["relation"]:
