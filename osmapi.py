@@ -605,7 +605,7 @@ class ApiChangesetUpload(object):
 			fi.flush()
 
 		#Apply changes to OSM representation of active data
-		newNodes = {}
+		newObjs = {'nodes': {}, 'ways': {}}
 		modNodes = {}
 		delNodes = set()
 
@@ -613,7 +613,7 @@ class ApiChangesetUpload(object):
 			method = meth.tag
 			if method == "create":
 
-				#Extract new nodes
+				#Find data that creates new nodes
 				for el in meth:
 					if el.tag != "node": continue
 					objId = int(el.attrib["id"])
@@ -626,15 +626,37 @@ class ApiChangesetUpload(object):
 						if ch.tag != "tag": continue
 						tagDict[ch.attrib["k"]] = ch.attrib["v"]
 
-					newNodes[objId] = (objLat, objLon, tagDict)
-					
-				#Apply change to database
-				for nid in newNodes:
-					objLat, objLon, tagDict = newNodes[nid]
+					newObjs["nodes"][objId] = (objLat, objLon, tagDict)
+
+				#Find data that creates new ways
+				for el in meth:
+					if el.tag != "way": continue
+					objId = int(el.attrib["id"])
+					if objId >= 0: continue
+
+					memNds = []
+					tagDict = {}
+					for ch in el:
+						if ch.tag == "tag":
+							tagDict[ch.attrib["k"]] = ch.attrib["v"]
+						if ch.tag == "nd":
+							memNds.append(int(ch.attrib["ref"]))
+
+					newObjs["ways"][objId] = (memNds, tagDict)
+
+				#Apply new nodes change to database
+				for nid in newObjs["nodes"]:
+					objLat, objLon, tagDict = newObjs["nodes"][nid]
 					osmData["node"][nid] = [(objLat, objLon, nid), tagDict]
+
+				#Apply new way changes to database
+				for wid in newObjs["ways"]:
+					memNds, tagDict = newObjs["ways"][wid]
+					osmData["way"][wid] = [memNds, tagDict]
 
 			if method == "modify":
 				
+				#Modify nodes
 				for el in meth:
 					if el.tag != "node": continue
 					objId = int(el.attrib["id"])
@@ -710,6 +732,17 @@ class ApiChangesetUpload(object):
 			modTag.append(u'/>\n')
 			out.append("".join(modTag))
 
+		for wid in idDiff["ways"]:
+			nuuid = idDiff["ways"][wid]
+			newId = idAssignment.AssignId("way", nuuid)
+			modTag = []
+			modTag.append(u'<way old_id="{0}" new_id="{1}"'.format(wid, newId))
+			newVer = 1
+			if newVer is not None:
+				modTag.append(u' new_version="{0}"'.format(newVer))
+			modTag.append(u'/>\n')
+			out.append("".join(modTag))
+
 		for nid in modNodes:
 			nodeInfo = modNodes[nid]
 			out.append(u'<node old_id="{0}" new_id="{0}" new_version="{1}"/>\n'.format(nid, nodeInfo[3]+1))
@@ -726,8 +759,8 @@ class ApiChangesetUpload(object):
 
 		#Update object cache
 		newNodePosDict = {}
-		for nid in newNodes:
-			objLat, objLon, tagDict = newNodes[nid]
+		for nid in newObjs["nodes"]:
+			objLat, objLon, tagDict = newObjs["nodes"][nid]
 			nuuid = idDiff["nodes"][nid]
 			newId = idAssignment.AssignId("node", nuuid)
 			nodePosDb[newId] = [objLat, objLon, nuuid]

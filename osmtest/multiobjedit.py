@@ -55,12 +55,12 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 		log.write(response[1])
 		log.write(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating node")
-	#wayId = int(response[0])
 	print response[0]
 	
 	diff = InterpretUploadResponse(response[0])
 	nodeId1 = diff["node"][-289]["new_id"]
 	nodeId2 = diff["node"][-2008]["new_id"]
+	wayId = diff["way"][-2010]["new_id"]
 
 	if verbose>=1: print "Close changeset"
 	#Close the changeset
