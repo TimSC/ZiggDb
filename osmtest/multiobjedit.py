@@ -37,6 +37,9 @@ def CheckWayHasChildNodes(wayXml, nodeIds):
 			return False
 	return True
 
+def CheckNodePosition(nodeXml, lat, lon):
+	return abs(float(nodeXml.attrib["lat"]) - lat) < 1e-7 and abs(float(nodeXml.attrib["lon"]) - lon) < 1e-7
+
 def TestMultiObjectEditing(userpass, verbose=0, save=False):
 
 	log = open("log.txt", "wt")
@@ -91,14 +94,18 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
 
-	#Read back area containing node
+	#Read back area containing data
 	bbox = [min(lon), min(lat), max(lon), max(lat)]
 	response = Get(conf.baseurl+"/0.6/map?bbox={0}".format(",".join(map(str, bbox))))
 	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error reading back area")
 	data = InterpretDownloadedArea(response[0])
 	node1Readback = data["node"][nodeId1]
+	if not CheckNodePosition(node1Readback, lat[0], lon[0]):
+		return (0,"Error node has bad position")
 	node2Readback = data["node"][nodeId2]
+	if not CheckNodePosition(node2Readback, lat[1], lon[1]):
+		return (0,"Error node has bad position")
 	wayReadback = data["way"][wayId]
 	if not CheckWayHasChildNodes(wayReadback, [nodeId1, nodeId2]):
 		return (0,"Error way has incorrect child nodes")
@@ -110,13 +117,13 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	cid = int(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating changset")
 
-	if verbose>=1: print "Modify a node with id:", nodeId1
+	if verbose>=1: print "Modify (by translation) a node with id:", nodeId1
 	#Modify test node
-	lat = 51.25
-	lon = -0.60
+	lat.append(51.25)
+	lon.append(-0.60)
 	modifyNode = '<osmChange version="0.6" generator="JOSM">'+"\n"+\
 	"<modify>\n"+\
-	"  <node id='"+str(nodeId1)+"' version='1' changeset='"+str(cid)+"' lat='"+str(lat)+"' lon='"+str(lon)+"' />\n"+\
+	"  <node id='"+str(nodeId1)+"' version='1' changeset='"+str(cid)+"' lat='"+str(lat[2])+"' lon='"+str(lon[2])+"' />\n"+\
 	"</modify>\n"+\
 	"</osmChange>\n"
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",modifyNode,userpass)
@@ -125,11 +132,25 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error modifying node")
 	diff = InterpretUploadResponse(response[0])
 
-	if verbose>=1: print "Close changeset"
 	#Close changeset
+	if verbose>=1: print "Close changeset"
 	response = Put(conf.baseurl+"/0.6/changeset/"+str(cid)+"/close","",userpass)
 	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
+
+	#Read back area containing data
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/map?bbox={0}".format(",".join(map(str, bbox))))
+	if verbose>=2: print response
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error reading back area")
+	data = InterpretDownloadedArea(response[0])
+	node1Readback = data["node"][nodeId1]
+	if not CheckNodePosition(node1Readback, lat[2], lon[2]):
+		return (0,"Error node has bad position")
+	node2Readback = data["node"][nodeId2]
+	wayReadback = data["way"][wayId]
+	if not CheckWayHasChildNodes(wayReadback, [nodeId1, nodeId2]):
+		return (0,"Error way has incorrect child nodes")
 
 	#Open changeset
 	if verbose>=1: print "Open changeset"
