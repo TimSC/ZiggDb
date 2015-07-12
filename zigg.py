@@ -192,7 +192,7 @@ class ZiggDb(object):
 
 				colPath = os.path.join(self.basePath, repoPath, str(x))
 				if not os.path.exists(colPath):
-					os.mkdir(colPath)
+					os.makedirs(colPath)
 
 				for y in range(repoData[2][1], repoData[3][1]):
 					
@@ -446,13 +446,74 @@ class ZiggDb(object):
 		for k in keysToRemove:
 			del objDict[k]
 
-	def _CheckUuidsAlreadyExist(self, newObjsDict, existingObjsDict):
+	def _CheckUuidsAlreadyExist(self, newArea, currentArea):
+
+		existingNodeUuids = set()
+	
+		#Extract existing nodes
+		existingNodeUuids.update(currentArea["nodes"].keys())
+
+		#Extract existing nodes from ways to a list
+		for wid in currentArea["ways"]:
+			objData = currentArea["ways"][wid]
+
+			shapes, tags = objData
+			for shape in shapes:
+				outer, inners = shape
+				for pt in outer:
+					ptId = pt[2]
+					if isinstance(ptId, int):
+						continue
+					existingNodeUuids.add(ptId)
+
+		#Extract existing nodes from ways to a list
+		for wid in currentArea["areas"]:
+			objData = currentArea["areas"][wid]
+
+			shapes, tags = objData
+			for shape in shapes:
+				outer, inners = shape
+				for pt in outer:
+					ptId = pt[2]
+					if isinstance(ptId, int):
+						continue
+					existingNodeUuids.add(ptId)
+
+				if inners is None: continue
+				for inner in inners:
+					for pt in inner:
+						ptId = pt[2]
+						if isinstance(ptId, int):
+							continue
+						existingNodeUuids.add(ptId)
+
 		missing = []
-		for objId in newObjsDict:
+		newNodes = newArea["nodes"]
+
+		for objId in newNodes:
 			#Integers are allowed
 			if isinstance(objId, int): continue
-			if objId not in existingObjsDict:
+			if objId not in existingNodeUuids:
 				missing.append(objId)
+
+		newWays = newArea["ways"]
+		currentWays = currentArea["ways"]
+
+		for objId in newWays:
+			#Integers are allowed
+			if isinstance(objId, int): continue
+			if objId not in currentWays:
+				missing.append(objId)
+
+		newAreas = newArea["areas"]
+		currentAreas = currentArea["areas"]
+
+		for objId in newAreas:
+			#Integers are allowed
+			if isinstance(objId, int): continue
+			if objId not in currentAreas:
+				missing.append(objId)
+
 		return missing
 
 	def _ValidateUuid(self, i):
@@ -550,10 +611,8 @@ class ZiggDb(object):
 			raise ValueError("Version info does not match")
 		
 		#Check no UUIDs have been invented by the client
-		missingN = self._CheckUuidsAlreadyExist(newArea["nodes"], currentArea["nodes"])
-		missingW = self._CheckUuidsAlreadyExist(newArea["ways"], currentArea["ways"])
-		missingA = self._CheckUuidsAlreadyExist(newArea["areas"], currentArea["areas"])
-		if len(missingN)>0 or len(missingW)>0 or len(missingA)>0:
+		missing = self._CheckUuidsAlreadyExist(newArea, currentArea)
+		if len(missing)>0:
 			raise ValueError("Input makes reference to non-existent objects")
 
 		#Check nodes only have one position

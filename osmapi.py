@@ -616,6 +616,9 @@ class ApiChangesetUpload(object):
 		modObjs = {'nodes': {}, 'ways': {}}
 		delObjs = {'nodes': set(), 'ways': set()}
 
+		if logging:
+			fi.write(str(activeData)+"\n")
+
 		for meth in root:
 			method = meth.tag
 			if method == "create":
@@ -731,6 +734,9 @@ class ApiChangesetUpload(object):
 
 		#Convert OSM representation to zigg based format
 		updatedArea = OsmToZigg(idAssignment, osmData)
+
+		if logging:
+			fi.write(str(updatedArea)+"\n")
 
 		#Copy active bbox to updated data
 		updatedArea["active"] = activeArea
