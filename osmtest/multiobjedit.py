@@ -170,7 +170,6 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if verbose>=2: print response
 	if save: open("mod.html", "wt").write(response[0])
 	diff = InterpretUploadResponse(response[0])
-	print response[0]
 	
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting way")
 
@@ -178,7 +177,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	deleteNode = '<osmChange version="0.6" generator="JOSM">' +\
 	"<delete>\n" +\
 	"  <node id='"+str(nodeId1)+"' version='2' "+\
-	"changeset='"+str(cid)+"' lat='"+str(lat)+"'  lon='"+str(lon)+"' />\n"+\
+	"changeset='"+str(cid)+"' lat='"+str(lat[2])+"'  lon='"+str(lon[2])+"' />\n"+\
 	"</delete>\n"+\
 	"</osmChange>\n"
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteNode,userpass)
@@ -191,7 +190,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	deleteNode = '<osmChange version="0.6" generator="JOSM">' +\
 	"<delete>\n" +\
 	"  <node id='"+str(nodeId2)+"' version='1' "+\
-	"changeset='"+str(cid)+"' lat='"+str(lat)+"'  lon='"+str(lon)+"' />\n"+\
+	"changeset='"+str(cid)+"' lat='"+str(lat[1])+"'  lon='"+str(lon[1])+"' />\n"+\
 	"</delete>\n"+\
 	"</osmChange>\n"
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteNode,userpass)
