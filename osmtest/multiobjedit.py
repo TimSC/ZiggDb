@@ -27,6 +27,13 @@ def InterpretDownloadedArea(downloadedData):
 		data[objTy][int(el.attrib["id"])] = el		
 	return data
 
+def ExtractTags(xmlObj):
+	out = {}
+	for el in xmlObj:
+		if el.tag != "tag": continue
+		out[el.attrib["k"]] = el.attrib["v"]
+	return out
+
 def CheckWayHasChildNodes(wayXml, nodeIds):
 	tmp = set()
 	for el in wayXml:
@@ -163,7 +170,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	#Modify way tags
 	modifyNode = '<osmChange version="0.6" generator="JOSM">'+"\n"+\
 	"<modify>\n"+\
-	"  <way id='{0}' changeset='{1}'>\n".format(wayId, cid)+\
+	"  <way id='{0}' changeset='{1}' version='{2}'>\n".format(wayId, cid, 1)+\
 	"    <nd ref='{0}' />\n".format(nodeId1)+\
 	"    <nd ref='{0}' />\n".format(nodeId2)+\
 	"    <tag k='foo' v='bar'/>\n"+\
@@ -173,10 +180,9 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",modifyNode,userpass)
 	if verbose>=2: print response
 	if save: open("mod.html", "wt").write(response[0])
-	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error modifying node")
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error modifying way")
 	diff = InterpretUploadResponse(response[0])
 	wayDiff = diff["way"][wayId]
-	print wayDiff
 
 	#Close changeset
 	if verbose>=1: print "Close changeset"
@@ -184,9 +190,22 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
 
-#	wayReadback = data["way"][wayId]
-#	if not CheckWayHasChildNodes(wayReadback, [nodeId1, nodeId2]):
-#		return (0,"Error way has incorrect child nodes")	
+	#Read back area containing data
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/map?bbox={0}".format(",".join(map(str, bbox))))
+	if verbose>=2: print response
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error reading back area")
+	data = InterpretDownloadedArea(response[0])
+	node1Readback = data["node"][nodeId1]
+	if not CheckNodePosition(node1Readback, lat[2], lon[2]):
+		return (0,"Error node has bad position")
+	node2Readback = data["node"][nodeId2]
+	wayReadback = data["way"][wayId]
+	if not CheckWayHasChildNodes(wayReadback, [nodeId1, nodeId2]):
+		return (0,"Error way has incorrect child nodes")
+	wayTags = ExtractTags(wayReadback)
+	if "foo" not in wayTags or wayTags["foo"] != "bar": 
+		return (0,"Error way has incorrect tag")
 
 	#Open changeset
 	if verbose>=1: print "Open changeset"

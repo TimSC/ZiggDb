@@ -666,7 +666,7 @@ class ApiChangesetUpload(object):
 
 			if method == "modify":
 				
-				#Modify nodes
+				#Find data that modifies nodes
 				for el in meth:
 					if el.tag != "node": continue
 					objId = int(el.attrib["id"])
@@ -687,10 +687,31 @@ class ApiChangesetUpload(object):
 
 					modObjs["nodes"][objId] = [objLat, objLon, tagDict, objVer]
 
-				#Apply change to database
+				#Find data that creates new ways
+				for el in meth:
+					if el.tag != "way": continue
+					objId = int(el.attrib["id"])
+					if objId < 0: continue
+					objVer = int(el.attrib["version"])
+
+					memNds = []
+					tagDict = {}
+					for ch in el:
+						if ch.tag == "tag":
+							tagDict[ch.attrib["k"]] = ch.attrib["v"]
+						if ch.tag == "nd":
+							memNds.append(int(ch.attrib["ref"]))
+
+					modObjs["ways"][objId] = (memNds, tagDict, objVer)
+
+				#Apply changes to database
 				for nid in modObjs["nodes"]:
 					objLat, objLon, tagDict, objVer = modObjs["nodes"][nid]
 					osmData["node"][nid] = [(objLat, objLon, nid), tagDict]
+
+				for wid in modObjs["ways"]:
+					memNds, tagDict, objVer = modObjs["ways"][wid]
+					osmData["way"][wid] = [memNds, tagDict]
 
 			if method == "delete":
 				
@@ -779,7 +800,7 @@ class ApiChangesetUpload(object):
 
 		for wid in modObjs["ways"]:
 			wayInfo = modObjs["ways"][wid]
-			out.append(u'<ways old_id="{0}" new_id="{0}" new_version="{1}"/>\n'.format(wid, nodeInfo[3]+1))
+			out.append(u'<way old_id="{0}" new_id="{0}" new_version="{1}"/>\n'.format(wid, wayInfo[2]+1))
 
 		for nid in delObjs["nodes"]:
 			out.append(u'<node old_id="{0}"/>\n'.format(nid))
