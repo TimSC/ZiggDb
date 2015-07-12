@@ -152,6 +152,42 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if not CheckWayHasChildNodes(wayReadback, [nodeId1, nodeId2]):
 		return (0,"Error way has incorrect child nodes")
 
+	if verbose>=1: print "Open changeset"
+	#Open another changeset
+	response = Put(conf.baseurl+"/0.6/changeset/create",createChangeset,userpass)
+	if verbose>=2: print response
+	cid = int(response[0])
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating changset")
+
+	if verbose>=1: print "Modify (my changing tags) a way with id:", wayId
+	#Modify way tags
+	modifyNode = '<osmChange version="0.6" generator="JOSM">'+"\n"+\
+	"<modify>\n"+\
+	"  <way id='{0}' changeset='{1}'>\n".format(wayId, cid)+\
+	"    <nd ref='{0}' />\n".format(nodeId1)+\
+	"    <nd ref='{0}' />\n".format(nodeId2)+\
+	"    <tag k='foo' v='bar'/>\n"+\
+	"  </way>\n"+\
+	"</modify>\n"+\
+	"</osmChange>\n"
+	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",modifyNode,userpass)
+	if verbose>=2: print response
+	if save: open("mod.html", "wt").write(response[0])
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error modifying node")
+	diff = InterpretUploadResponse(response[0])
+	wayDiff = diff["way"][wayId]
+	print wayDiff
+
+	#Close changeset
+	if verbose>=1: print "Close changeset"
+	response = Put(conf.baseurl+"/0.6/changeset/"+str(cid)+"/close","",userpass)
+	if verbose>=2: print response
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
+
+#	wayReadback = data["way"][wayId]
+#	if not CheckWayHasChildNodes(wayReadback, [nodeId1, nodeId2]):
+#		return (0,"Error way has incorrect child nodes")	
+
 	#Open changeset
 	if verbose>=1: print "Open changeset"
 	response = Put(conf.baseurl+"/0.6/changeset/create",createChangeset,userpass)
