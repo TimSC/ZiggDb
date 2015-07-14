@@ -259,20 +259,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	wayDiff = diff["way"][wayId]
 	nodeId3 = int(diff["node"][-105]["new_id"])
 
-	#Close changeset
-	if verbose>=1: print "Close changeset"
-	response = Put(conf.baseurl+"/0.6/changeset/"+str(cid)+"/close","",userpass)
-	if verbose>=2: print response
-	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
-
 	#######################################################################
-
-	#Open changeset
-	if verbose>=1: print "Open changeset"
-	response = Put(conf.baseurl+"/0.6/changeset/create",createChangeset,userpass)
-	if verbose>=2: print response
-	cid = int(response[0])
-	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating changset")
 
 	if verbose>=1: print "Delete way"
 	deleteWay = '<osmChange version="0.6" generator="JOSM">'+"\n"+\
