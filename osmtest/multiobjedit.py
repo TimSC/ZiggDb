@@ -2,6 +2,7 @@ import sys, conf
 sys.path.append( "." )
 from urlutil import *
 import xml.etree.ElementTree as ET
+from sqlitedict import SqliteDict
 
 def InterpretUploadResponse(response):
 	root = ET.fromstring(response)
@@ -249,7 +250,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	cid = int(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating changset")
 
-	if verbose>=1: print "Add an extra node:", nodeId1
+	if verbose>=1: print "Add an extra node"
 	#Add another test node
 	lat.append(51.55)
 	lon.append(-0.59)
@@ -273,6 +274,9 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	diff = InterpretUploadResponse(response[0])
 	wayDiff = diff["way"][wayId]
 	nodeId3 = int(diff["node"][-105]["new_id"])
+
+	#wayDb = SqliteDict('../data/wayDb.sqlite', autocommit=True)
+	#print wayDb[wayId]
 
 	#Verify cache in this area
 	bbox = [min(lon), min(lat), max(lon), max(lat)]

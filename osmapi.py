@@ -375,7 +375,7 @@ class ApiVerifyCache(object):
 			if childNds == cachedNode[0]:
 				continue
 
-			out.append("Way has incorrect nodes {0}\n".format(wid))
+			out.append("Way has incorrect nodes {0} {1} {2}\n".format(wid, childNds, cachedNode[0]))
 
 		return "".join(out)
 
@@ -681,7 +681,7 @@ class ApiChangesetUpload(object):
 						if ch.tag != "tag": continue
 						tagDict[ch.attrib["k"]] = ch.attrib["v"]
 
-					newObjs["nodes"][objId] = (objLat, objLon, tagDict)
+					newObjs["nodes"][objId] = [objLat, objLon, tagDict]
 
 				#Find data that creates new ways
 				for el in meth:
@@ -697,7 +697,7 @@ class ApiChangesetUpload(object):
 						if ch.tag == "nd":
 							memNds.append(int(ch.attrib["ref"]))
 
-					newObjs["ways"][objId] = (memNds, tagDict)
+					newObjs["ways"][objId] = [memNds, tagDict]
 
 				#Apply new nodes change to database
 				for nid in newObjs["nodes"]:
@@ -732,7 +732,7 @@ class ApiChangesetUpload(object):
 
 					modObjs["nodes"][objId] = [objLat, objLon, tagDict, objVer]
 
-				#Find data that creates new ways
+				#Find data that modifies existing ways
 				for el in meth:
 					if el.tag != "way": continue
 					objId = int(el.attrib["id"])
@@ -747,7 +747,7 @@ class ApiChangesetUpload(object):
 						if ch.tag == "nd":
 							memNds.append(int(ch.attrib["ref"]))
 
-					modObjs["ways"][objId] = (memNds, tagDict, objVer)
+					modObjs["ways"][objId] = [memNds, tagDict, objVer]
 
 				#Apply changes to database
 				for nid in modObjs["nodes"]:
@@ -855,12 +855,35 @@ class ApiChangesetUpload(object):
 
 		out.append(u'</diffResult>\n')
 
-		if logging:
-			fi.write("response:\n")
-			fi.write("".join(out).encode("utf-8")+"\n")
-			fi.close()
+		#Update child object IDs in changes
+		for wid in newObjs["ways"]:
+			memNds, tagDict = newObjs["ways"][wid]
+			#nuuid = idDiff["ways"][wid]
+			updatedMemNds = []
+			for nid in memNds:
+				if nid < 0:
+					cnuuid = idDiff["nodes"][nid]
+					cnewId = idAssignment.AssignId("node", cnuuid)
+					updatedMemNds.append(cnewId)
+				else:
+					updatedMemNds.append(nid)
+			newObjs["ways"][wid][0] = updatedMemNds
 
-		#Update object cache
+		for wid in modObjs["ways"]:
+			memNds, tagDict, objVer = modObjs["ways"][wid]
+			#nuuid = idDiff["ways"][wid]
+			updatedMemNds = []
+			for nid in memNds:
+				if nid < 0:
+					cnuuid = idDiff["nodes"][nid]
+					cnewId = idAssignment.AssignId("node", cnuuid)
+					updatedMemNds.append(cnewId)
+				else:
+					updatedMemNds.append(nid)
+			modObjs["ways"][wid][0] = updatedMemNds
+			fi.write("way {0}: {1}\n".format(wid, updatedMemNds))
+
+		#Update object cache with created objects
 		newNodePosDict = {}
 		for nid in newObjs["nodes"]:
 			objLat, objLon, tagDict = newObjs["nodes"][nid]
@@ -871,31 +894,34 @@ class ApiChangesetUpload(object):
 		for wid in newObjs["ways"]:
 			memNds, tagDict = newObjs["ways"][wid]
 			nuuid = idDiff["ways"][wid]
-			updatedMemNds = []
-			for nid in memNds:
-				cnuuid = idDiff["nodes"][nid]
-				cnewId = idAssignment.AssignId("node", cnuuid)
-				updatedMemNds.append(cnewId)
 			newId = idAssignment.AssignId("way", nuuid)
-			wayDb[newId] = [updatedMemNds, nuuid]
+			wayDb[newId] = [memNds, nuuid]
 
+		#Update object cache with modified objects
 		for nid in modObjs["nodes"]:
 			objLat, objLon, tagDict, objVer = modObjs["nodes"][nid]
 			nuuid = idAssignment.GetUuidFromId("node", nid)
 			nodePosDb[nid] = [objLat, objLon, nuuid]
 
-		#TODO modify way cache
+		for wid in modObjs["ways"]:
+			memNds, tagDict, objVer = modObjs["ways"][wid]
+			wuuid = idAssignment.GetUuidFromId("way", wid)
+			wayDb[wid] = [memNds, wuuid]
+			fi.write("wayx {0}: {1}\n".format(wid, wayDb[wid]))
 
+		#Delete obj in cache when necessary
 		for nid in delObjs["nodes"]:
 			del nodePosDb[nid]
 
 		for wid in delObjs["ways"]:
 			del wayDb[wid]
 
-		#newNodePosDict[nid] = pos
+		if logging:
+			fi.write("response:\n")
+			fi.write("".join(out).encode("utf-8")+"\n")
+			fi.close()
 
 		#Return result
-
 		web.header('Content-Type', 'text/xml')
 		return u"".join(out).encode("utf-8")
 
