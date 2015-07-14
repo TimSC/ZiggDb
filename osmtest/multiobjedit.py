@@ -131,6 +131,11 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if not CheckWayHasChildNodes(wayReadback, [nodeId1, nodeId2]):
 		return (0,"Error way has incorrect child nodes")
 
+	#Verify cache in this area
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
+	print response[0]
+
 	#######################################################################
 
 	if verbose>=1: print "Open changeset"
@@ -174,6 +179,11 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	wayReadback = data["way"][wayId]
 	if not CheckWayHasChildNodes(wayReadback, [nodeId1, nodeId2]):
 		return (0,"Error way has incorrect child nodes")
+
+	#Verify cache in this area
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
+	print response[0]
 
 	#######################################################################
 
@@ -225,6 +235,11 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if "foo" not in wayTags or wayTags["foo"] != "bar": 
 		return (0,"Error way has incorrect tag")
 
+	#Verify cache in this area
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
+	print response[0]
+
 	########### Modify child nodes ##################
 
 	if verbose>=1: print "Open changeset"
@@ -258,6 +273,11 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	diff = InterpretUploadResponse(response[0])
 	wayDiff = diff["way"][wayId]
 	nodeId3 = int(diff["node"][-105]["new_id"])
+
+	#Verify cache in this area
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
+	print response[0]
 
 	#######################################################################
 
@@ -295,6 +315,11 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 		return (0,"Error node(s) were not deleted")
 	if wayId in data["way"]:
 		return (0,"Error way was not deleted")
+
+	#Verify cache in this area
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
+	print response[0]
 
 	return (1,"OK")
 

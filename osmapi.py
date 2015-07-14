@@ -262,10 +262,6 @@ class ApiMap(object):
 		#Add a global lock TODO
 		return self.Render()
 
-	def GetOsmRepresentation(self, bbox):
-		#Get OSM representation of requested area
-		pass
-
 	def Render(self):
 		webInput = web.input()
 		ziggDb = web.ctx.ziggDb
@@ -285,8 +281,8 @@ class ApiMap(object):
 
 		osmData = ZiggToOsm(idAssignment, area)
 
-		#Debug code
-		OsmToZigg(idAssignment, osmData)
+		#Debug code, try the inverse function
+		#OsmToZigg(idAssignment, osmData)
 
 		#Write individual nodes to output
 		for nid in osmData["node"]:
@@ -333,6 +329,32 @@ class ApiMap(object):
 
 		web.header('Content-Type', 'text/xml')
 		return "".join(out).encode("utf-8")
+
+class ApiVerifyCache(object):
+	def GET(self):
+		#Add a global lock TODO
+		return self.Render()
+
+	def POST(self):
+		#Add a global lock TODO
+		return self.Render()
+
+	def Render(self):
+		webInput = web.input()
+		ziggDb = web.ctx.ziggDb
+		nodePosDb = web.ctx.nodePosDb
+		wayDb = web.ctx.wayDb
+		idAssignment = IdAssignment()
+
+		bbox = map(float, webInput["bbox"].split(","))
+		area = ziggDb.GetArea(bbox)
+		osmData = ZiggToOsm(idAssignment, area)
+
+		print osmData
+
+		return "Cache check now"
+
+
 
 class ApiBase(object):
 	def GET(self):
@@ -932,6 +954,7 @@ class ApiUserDetails(object):
 
 urls = (
 	'/api/0.6/map', 'ApiMap',
+	'/api/0.6/verifycache', 'ApiVerifyCache',
 	'/api/capabilities', 'ApiCapabilities',
 	'/api/0.6/capabilities', 'ApiCapabilities',
 	'/api/0.6/changeset/create', 'ApiChangesetCreate',
