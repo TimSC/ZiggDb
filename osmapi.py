@@ -881,7 +881,6 @@ class ApiChangesetUpload(object):
 				else:
 					updatedMemNds.append(nid)
 			modObjs["ways"][wid][0] = updatedMemNds
-			fi.write("way {0}: {1}\n".format(wid, updatedMemNds))
 
 		#Update object cache with created objects
 		newNodePosDict = {}
@@ -907,7 +906,6 @@ class ApiChangesetUpload(object):
 			memNds, tagDict, objVer = modObjs["ways"][wid]
 			wuuid = idAssignment.GetUuidFromId("way", wid)
 			wayDb[wid] = [memNds, wuuid]
-			fi.write("wayx {0}: {1}\n".format(wid, wayDb[wid]))
 
 		#Delete obj in cache when necessary
 		for nid in delObjs["nodes"]:
