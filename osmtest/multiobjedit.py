@@ -242,23 +242,11 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	"<create>\n"+\
 	"  <node id='-105' version='1' changeset='"+str(cid)+"' lat='"+str(lat[3])+"' lon='"+str(lon[3])+"' />\n"+\
 	"</create>\n"+\
-	"</osmChange>\n"
-	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",modifyNode,userpass)
-	if verbose>=2: print response
-	if save: open("add.html", "wt").write(response[0])
-	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error modifying node")
-	diff = InterpretUploadResponse(response[0])
-	nodeId3 = int(diff["node"][-105]["new_id"])
-
-	#Change way to use this node
-	if verbose>=1: print "Modify a way {0} to use extra node {1}".format(wayId, nodeId3)
-	#Modify way tags
-	modifyNode = '<osmChange version="0.6" generator="JOSM">'+"\n"+\
 	"<modify>\n"+\
 	"  <way id='{0}' changeset='{1}' version='{2}'>\n".format(wayId, cid, 1)+\
 	"    <nd ref='{0}' />\n".format(nodeId1)+\
 	"    <nd ref='{0}' />\n".format(nodeId2)+\
-	"    <nd ref='{0}' />\n".format(nodeId3)+\
+	"    <nd ref='-105' />\n"+\
 	"    <tag k='foo2' v='bar'/>\n"+\
 	"  </way>\n"+\
 	"</modify>\n"+\
@@ -269,6 +257,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error modifying way")
 	diff = InterpretUploadResponse(response[0])
 	wayDiff = diff["way"][wayId]
+	nodeId3 = int(diff["node"][-105]["new_id"])
 
 	#Close changeset
 	if verbose>=1: print "Close changeset"
