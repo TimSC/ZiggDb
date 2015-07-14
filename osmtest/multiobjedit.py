@@ -292,41 +292,22 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	DeleteSingleNode(nodeId2, cid, userpass, lat[1], lon[1], save, verbose)
 	DeleteSingleNode(nodeId3, cid, userpass, lat[3], lon[3], save, verbose)
 
-	#Delete a non-existant node
-	#nonExistId = 999999999999999
-	#deleteNode = '<osmChange version="0.6" generator="JOSM">' +\
-	#"<delete>\n" +\
-	#"  <node id='"+str(nonExistId)+"' version='1' "+\
-	#"changeset='"+str(cid)+"' lat='"+str(lat)+"'  lon='"+str(lon)+"' />\n"+\
-	#"</delete>\n"+\
-	#"</osmChange>\n"
-	#response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteNode,userpass)
-	#if verbose: print response
-	#if save: open("mod.html", "wt").write(response[0])
-	#if HeaderResponseCode(response[1]) != "HTTP/1.1 409 Conflict": return (0,"Error deleting node")
-	#diff = InterpretUploadResponse(response[0])
-
 	#Close changeset
 	if verbose>=1: print "Close changeset"
 	response = Put(conf.baseurl+"/0.6/changeset/"+str(cid)+"/close","",userpass)
 	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
 
-	return (1,"OK")
-
-	#Attempt to read deleted node
-	response = Get(conf.baseurl+"/0.6/node/"+str(nodeId))
+	#Check nodes and way really have gone
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/map?bbox={0}".format(",".join(map(str, bbox))))
 	if verbose>=2: print response
-	if HeaderResponseCode(response[1]) != "HTTP/1.1 410 Gone": 
-		return (0,"Error deleted node had wrong header code")
-	if response[0] != "":#"The node with the id "+str(nodeId)+" has already been deleted":
-		return (0,"Error reading deleted node had wrong message")
-
-	#Check nodes have been deleted OK
-	ret = ReadDeletedNode(nodeId)
-	if ret[0] == 0: return ret
-	ret = ReadDeletedNode(nodeId2)
-	if ret[0] == 0: return ret
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error reading back area")
+	data = InterpretDownloadedArea(response[0])
+	if nodeId1 in data["node"] or nodeId2 in data["node"] or nodeId3 in data["node"]:
+		return (0,"Error node(s) were not deleted")
+	if wayId in data["way"]:
+		return (0,"Error way was not deleted")
 
 	return (1,"OK")
 
