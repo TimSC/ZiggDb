@@ -350,11 +350,34 @@ class ApiVerifyCache(object):
 		area = ziggDb.GetArea(bbox)
 		osmData = ZiggToOsm(idAssignment, area)
 
-		print osmData
+		out = []
+		for nid in osmData["node"]:
+			try:
+				cachedNode = nodePosDb[nid]
+			except KeyError:
+				continue
 
-		return "Cache check now"
+			pos, data = osmData["node"][nid]
+			diff1 = abs(cachedNode[0] - pos[0]) < 1e-7
+			diff2 = abs(cachedNode[1] - pos[1]) < 1e-7
+			if diff1 is True and diff2 is True:
+				continue
 
+			out.append("Error: node position incorrect {0} {1}\n".format(diff1, diff2))
 
+		for wid in osmData["way"]:
+			try:
+				cachedNode = wayDb[wid]
+			except KeyError:
+				continue
+
+			childNds, tags = osmData["way"][wid]
+			if childNds == cachedNode[0]:
+				continue
+
+			out.append("Way has incorrect nodes {0}\n".format(wid))
+
+		return "".join(out)
 
 class ApiBase(object):
 	def GET(self):

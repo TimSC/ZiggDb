@@ -134,7 +134,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	#Verify cache in this area
 	bbox = [min(lon), min(lat), max(lon), max(lat)]
 	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
-	print response[0]
+	if len(response[0]) > 0: print response[0]
 
 	#######################################################################
 
@@ -183,7 +183,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	#Verify cache in this area
 	bbox = [min(lon), min(lat), max(lon), max(lat)]
 	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
-	print response[0]
+	if len(response[0]) > 0: print response[0]
 
 	#######################################################################
 
@@ -238,7 +238,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	#Verify cache in this area
 	bbox = [min(lon), min(lat), max(lon), max(lat)]
 	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
-	print response[0]
+	if len(response[0]) > 0: print response[0]
 
 	########### Modify child nodes ##################
 
@@ -277,7 +277,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	#Verify cache in this area
 	bbox = [min(lon), min(lat), max(lon), max(lat)]
 	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
-	print response[0]
+	if len(response[0]) > 0: print response[0]
 
 	#######################################################################
 
@@ -319,7 +319,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	#Verify cache in this area
 	bbox = [min(lon), min(lat), max(lon), max(lat)]
 	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
-	print response[0]
+	if len(response[0]) > 0: print response[0]
 
 	return (1,"OK")
 
