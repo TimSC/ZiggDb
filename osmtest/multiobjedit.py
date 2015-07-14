@@ -47,6 +47,20 @@ def CheckWayHasChildNodes(wayXml, nodeIds):
 def CheckNodePosition(nodeXml, lat, lon):
 	return abs(float(nodeXml.attrib["lat"]) - lat) < 1e-7 and abs(float(nodeXml.attrib["lon"]) - lon) < 1e-7
 
+def DeleteSingleNode(nid, cid, userpass, lat, lon, save, verbose=0):
+	if verbose>=1: print "Delete node", nid
+	deleteNode = '<osmChange version="0.6" generator="JOSM">' +\
+	"<delete>\n" +\
+	"  <node id='"+str(nid)+"' version='1' "+\
+	"changeset='"+str(cid)+"' lat='"+str(lat)+"'  lon='"+str(lon)+"' />\n"+\
+	"</delete>\n"+\
+	"</osmChange>\n"
+	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteNode,userpass)
+	if verbose>=2: print response
+	if save: open("mod.html", "wt").write(response[0])
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
+	diff = InterpretUploadResponse(response[0])
+
 def TestMultiObjectEditing(userpass, verbose=0, save=False):
 
 	log = open("log.txt", "wt")
@@ -117,6 +131,8 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if not CheckWayHasChildNodes(wayReadback, [nodeId1, nodeId2]):
 		return (0,"Error way has incorrect child nodes")
 
+	#######################################################################
+
 	if verbose>=1: print "Open changeset"
 	#Open another changeset
 	response = Put(conf.baseurl+"/0.6/changeset/create",createChangeset,userpass)
@@ -159,6 +175,8 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if not CheckWayHasChildNodes(wayReadback, [nodeId1, nodeId2]):
 		return (0,"Error way has incorrect child nodes")
 
+	#######################################################################
+
 	if verbose>=1: print "Open changeset"
 	#Open another changeset
 	response = Put(conf.baseurl+"/0.6/changeset/create",createChangeset,userpass)
@@ -166,7 +184,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	cid = int(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating changset")
 
-	if verbose>=1: print "Modify (my changing tags) a way with id:", wayId
+	if verbose>=1: print "Modify (by changing tags) a way with id:", wayId
 	#Modify way tags
 	modifyNode = '<osmChange version="0.6" generator="JOSM">'+"\n"+\
 	"<modify>\n"+\
@@ -207,6 +225,59 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if "foo" not in wayTags or wayTags["foo"] != "bar": 
 		return (0,"Error way has incorrect tag")
 
+	########### Modify child nodes ##################
+
+	if verbose>=1: print "Open changeset"
+	#Open another changeset
+	response = Put(conf.baseurl+"/0.6/changeset/create",createChangeset,userpass)
+	if verbose>=2: print response
+	cid = int(response[0])
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating changset")
+
+	if verbose>=1: print "Add an extra node:", nodeId1
+	#Add another test node
+	lat.append(51.55)
+	lon.append(-0.59)
+	modifyNode = '<osmChange version="0.6" generator="JOSM">'+"\n"+\
+	"<create>\n"+\
+	"  <node id='-105' version='1' changeset='"+str(cid)+"' lat='"+str(lat[3])+"' lon='"+str(lon[3])+"' />\n"+\
+	"</create>\n"+\
+	"</osmChange>\n"
+	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",modifyNode,userpass)
+	if verbose>=2: print response
+	if save: open("add.html", "wt").write(response[0])
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error modifying node")
+	diff = InterpretUploadResponse(response[0])
+	nodeId3 = int(diff["node"][-105]["new_id"])
+
+	#Change way to use this node
+	if verbose>=1: print "Modify a way {0} to use extra node {1}".format(wayId, nodeId3)
+	#Modify way tags
+	modifyNode = '<osmChange version="0.6" generator="JOSM">'+"\n"+\
+	"<modify>\n"+\
+	"  <way id='{0}' changeset='{1}' version='{2}'>\n".format(wayId, cid, 1)+\
+	"    <nd ref='{0}' />\n".format(nodeId1)+\
+	"    <nd ref='{0}' />\n".format(nodeId2)+\
+	"    <nd ref='{0}' />\n".format(nodeId3)+\
+	"    <tag k='foo2' v='bar'/>\n"+\
+	"  </way>\n"+\
+	"</modify>\n"+\
+	"</osmChange>\n"
+	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",modifyNode,userpass)
+	if verbose>=2: print response
+	if save: open("mod.html", "wt").write(response[0])
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error modifying way")
+	diff = InterpretUploadResponse(response[0])
+	wayDiff = diff["way"][wayId]
+
+	#Close changeset
+	if verbose>=1: print "Close changeset"
+	response = Put(conf.baseurl+"/0.6/changeset/"+str(cid)+"/close","",userpass)
+	if verbose>=2: print response
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
+
+	#######################################################################
+
 	#Open changeset
 	if verbose>=1: print "Open changeset"
 	response = Put(conf.baseurl+"/0.6/changeset/create",createChangeset,userpass)
@@ -228,31 +299,9 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting way")
 
-	if verbose>=1: print "Delete node"
-	deleteNode = '<osmChange version="0.6" generator="JOSM">' +\
-	"<delete>\n" +\
-	"  <node id='"+str(nodeId1)+"' version='2' "+\
-	"changeset='"+str(cid)+"' lat='"+str(lat[2])+"'  lon='"+str(lon[2])+"' />\n"+\
-	"</delete>\n"+\
-	"</osmChange>\n"
-	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteNode,userpass)
-	if verbose>=2: print response
-	if save: open("mod.html", "wt").write(response[0])
-	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
-	diff = InterpretUploadResponse(response[0])
-
-	if verbose>=1: print "Delete another node"
-	deleteNode = '<osmChange version="0.6" generator="JOSM">' +\
-	"<delete>\n" +\
-	"  <node id='"+str(nodeId2)+"' version='1' "+\
-	"changeset='"+str(cid)+"' lat='"+str(lat[1])+"'  lon='"+str(lon[1])+"' />\n"+\
-	"</delete>\n"+\
-	"</osmChange>\n"
-	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteNode,userpass)
-	if verbose>=2: print response
-	if save: open("mod.html", "wt").write(response[0])
-	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
-	diff = InterpretUploadResponse(response[0])
+	DeleteSingleNode(nodeId1, cid, userpass, lat[2], lon[2], save, verbose)
+	DeleteSingleNode(nodeId2, cid, userpass, lat[1], lon[1], save, verbose)
+	DeleteSingleNode(nodeId3, cid, userpass, lat[3], lon[3], save, verbose)
 
 	#Delete a non-existant node
 	#nonExistId = 999999999999999
