@@ -299,6 +299,11 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting way")
 
+	#Verify cache in this area
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
+	if len(response[0]) > 0: print response[0]
+
 	DeleteSingleNode(nodeId1, cid, userpass, lat[2], lon[2], save, verbose)
 	DeleteSingleNode(nodeId2, cid, userpass, lat[1], lon[1], save, verbose)
 	DeleteSingleNode(nodeId3, cid, userpass, lat[3], lon[3], save, verbose)
@@ -323,6 +328,11 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	#Verify cache in this area
 	bbox = [min(lon), min(lat), max(lon), max(lat)]
 	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
+	if len(response[0]) > 0: print response[0]
+
+	#Verify underlying database integrity in this area
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/verifydb?bbox={0}".format(",".join(map(str, bbox))))
 	if len(response[0]) > 0: print response[0]
 
 	return (1,"OK")

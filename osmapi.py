@@ -379,6 +379,23 @@ class ApiVerifyCache(object):
 
 		return "".join(out)
 
+class ApiVerifyDb(object):
+	def GET(self):
+		#Add a global lock TODO
+		return self.Render()
+
+	def POST(self):
+		#Add a global lock TODO
+		return self.Render()
+
+	def Render(self):
+		webInput = web.input()
+		ziggDb = web.ctx.ziggDb
+		idAssignment = IdAssignment()
+		bbox = map(float, webInput["bbox"].split(","))
+
+		return ziggDb.Verify(bbox)
+
 class ApiBase(object):
 	def GET(self):
 		return self.Render()
@@ -1002,6 +1019,7 @@ class ApiUserDetails(object):
 urls = (
 	'/api/0.6/map', 'ApiMap',
 	'/api/0.6/verifycache', 'ApiVerifyCache',
+	'/api/0.6/verifydb', 'ApiVerifyDb',
 	'/api/capabilities', 'ApiCapabilities',
 	'/api/0.6/capabilities', 'ApiCapabilities',
 	'/api/0.6/changeset/create', 'ApiChangesetCreate',

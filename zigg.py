@@ -870,3 +870,6 @@ class ZiggDb(object):
 
 		return changes
 
+	def Verify(self, bbox):
+		return "TODO Verify DB", str(bbox)
+
