@@ -337,6 +337,8 @@ class ZiggRepo(object):
 			#Save result
 			cPickle.dump(tileData, open(tilePath, "wt"))
 
+	def Verify(self, bbox):
+		return None
 
 # ****************** Main ZiggDb class **********************
 
@@ -892,7 +894,12 @@ class ZiggDb(object):
 		return changes
 
 	def Verify(self, bbox):
-		#merged, versionInfo = _GetTilesFromRepos(self, bbox)
+		relevantRepos = self._FindRelevantRepos(bbox)
+
+		#Verify relevant repos
+		for repoName in relevantRepos:
+			repo = self.repos[repoName]
+			repo.Verify(bbox)
 
 		return "TODO Verify DB", str(bbox)
 
