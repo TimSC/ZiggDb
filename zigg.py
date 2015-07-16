@@ -1,5 +1,7 @@
 import cPickle, uuid, slippy, os, copy, exceptions
 
+# ********* Utilities *************
+
 def CheckRectOverlap(rect1, rect2):
 	#left,bottom,right,top
 
@@ -172,6 +174,8 @@ def ApplyIdChanges(area, idChanges):
 							continue
 						pt[2] = nodeChanges[ptId]
 
+# ****************** ZiggRepo class **********************
+
 class ZiggRepo(object):
 	def __init__(self, name, zoom, corner1, corner2, path):
 		self.name = name
@@ -334,7 +338,7 @@ class ZiggRepo(object):
 			cPickle.dump(tileData, open(tilePath, "wt"))
 
 
-# ****************** Main class **********************
+# ****************** Main ZiggDb class **********************
 
 class ZiggDb(object):
 	
