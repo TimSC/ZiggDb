@@ -172,6 +172,167 @@ def ApplyIdChanges(area, idChanges):
 							continue
 						pt[2] = nodeChanges[ptId]
 
+class ZiggRepo(object):
+	def __init__(self, name, zoom, corner1, corner2, path):
+		self.name = name
+		self.zoom = zoom
+		self.corner1 = corner1
+		self.corner2 = corner2
+		self.path = path
+		self.basePath = ""
+
+	def SetBasePath(self, basePath):
+		self.basePath = basePath
+	
+	def GenerateTestData(self):
+
+		for x in range(self.corner1[0], self.corner2[0]):
+
+			colPath = os.path.join(self.basePath, self.path, str(x))
+			if not os.path.exists(colPath):
+				os.makedirs(colPath)
+
+			for y in range(self.corner1[1], self.corner2[1]):
+				
+				tilePath = os.path.join(self.basePath, self.path, str(x), str(y)+".dat")
+				#if os.path.exists(tilePath): continue
+
+				tl = slippy.num2deg(x, y, self.zoom)
+				br =  slippy.num2deg(x + 1, y + 1, self.zoom)
+
+				commonNode = uuid.uuid4().bytes
+
+				ziggArea = {}
+				ziggArea["nodes"] = {}
+				nodeId = uuid.uuid4().bytes
+				ziggArea["nodes"][nodeId] = [[[[[Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), nodeId]],None]],
+					{"name": "special place"}]
+				ziggArea["ways"] = {}
+				ziggArea["ways"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .2), Interp(tl[1], br[1], .2), uuid.uuid4().bytes], 
+					[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .5), commonNode], 
+					[Interp(tl[0], br[0], .3), Interp(tl[1], br[1], .23), uuid.uuid4().bytes]], None]],
+					{"name": "path"}]
+				ziggArea["areas"] = {}
+				ziggArea["areas"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .4), uuid.uuid4().bytes], 
+					[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .5), commonNode], 
+					[Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .5), uuid.uuid4().bytes], 
+					[Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .4), uuid.uuid4().bytes]], []]],
+					{"name": "test area"}]
+
+				cPickle.dump(ziggArea, open(tilePath, "wt"))
+
+	def IsRelevant(self, bbox):
+		tl = slippy.num2deg(self.corner1[0], self.corner1[1], self.zoom)
+		br =  slippy.num2deg(self.corner2[0], self.corner2[1], self.zoom)
+
+		return CheckRectOverlap([tl[1], br[0], br[1], tl[0]], bbox)		
+
+	def GetTiles(self, merged, bbox):
+		countTiles = 0
+		tileVersions = {}
+		for x in range(self.corner1[0], self.corner2[0]):
+			for y in range(self.corner1[1], self.corner2[1]):
+				tl = slippy.num2deg(x, y, self.zoom)
+				br =  slippy.num2deg(x + 1, y + 1, self.zoom)
+				within = CheckRectOverlap([tl[1], br[0], br[1], tl[0]], bbox)
+				if not within: continue
+
+				tilePath = os.path.join(self.basePath, self.path, str(x), str(y)+".dat")
+				if not os.path.exists(tilePath): continue
+
+				tileData = cPickle.load(open(tilePath, "rt"))
+
+				merged["nodes"].update(tileData["nodes"])
+				merged["ways"].update(tileData["ways"])
+				merged["areas"].update(tileData["areas"])
+				countTiles += 1
+
+				if "version" in tileData:
+					tileVersions[(x, y)] = tileData["version"]
+				else:
+					tileVersions[(x, y)] = 1
+
+		return tileVersions
+
+	def SetTiles(self, currentArea, area):
+		tilesToUpdate = set()
+		bbox = area["active"]
+
+		#Get tiles in active area			
+		for x in range(self.corner1[0], self.corner2[0]):
+			for y in range(self.corner1[1], self.corner2[1]):
+				tl = slippy.num2deg(x, y, self.zoom)
+				br =  slippy.num2deg(x + 1, y + 1, self.zoom)
+				touchesActive = CheckRectOverlap([tl[1], br[0], br[1], tl[0]], bbox)
+
+				if not touchesActive: continue
+				tilesToUpdate.add((x, y))
+
+		#Get tiles that may be affected
+		for objType in currentArea:
+			if objType == "active": continue
+			if objType == "versionInfo": continue
+			objDict = currentArea[objType]
+			for objId in objDict:
+				pts = []
+				objData = objDict[objId]
+				objShapes, objTags = objData
+				for shape in objShapes:
+					outer, inners = shape
+					pts.extend(outer)
+					if inners is None: continue
+					for inner in inners:
+						pts.extend(outer)
+
+				for pt in pts:
+					tilexy = tuple(map(int, slippy.deg2num(pt[0], pt[1], self.zoom)))
+					tilesToUpdate.add(tilexy)
+
+		#Update tiles
+		for x, y in tilesToUpdate:
+
+			tilePath = os.path.join(self.basePath, self.path, str(x), str(y)+".dat")
+			if not os.path.exists(tilePath): continue
+
+			tileData = cPickle.load(open(tilePath, "rt"))
+			if "version" in tileData:
+				tileVersion = tileData["version"]
+			else:
+				tileVersion = 1
+
+			#Remove existing objects that are entirely inside active area
+			tileData["nodes"] = FindPartlyOutside(tileData["nodes"], bbox)
+			tileData["ways"] = FindPartlyOutside(tileData["ways"], bbox)
+			tileData["areas"] = FindPartlyOutside(tileData["areas"], bbox)
+
+			#Add new objects that are entirely inside active area
+			nodesInside = FindEntirelyInside(area["nodes"], bbox)
+			waysInside = FindEntirelyInside(area["ways"], bbox)
+			areasInside = FindEntirelyInside(area["areas"], bbox)
+
+			tileData["nodes"].update(nodesInside)
+			tileData["ways"].update(waysInside)
+			tileData["areas"].update(areasInside)
+		
+			#Update objects that are partially outside
+			for objId in area["nodes"]:
+				if objId in nodesInside: continue
+				tileData["nodes"][objId] = area["nodes"][objId]
+
+			for objId in area["ways"]:
+				if objId in waysInside: continue
+				tileData["ways"][objId] = area["ways"][objId]
+
+			for objId in area["areas"]:
+				if objId in areasInside: continue
+				tileData["areas"][objId] = area["areas"][objId]
+
+			#Increment version
+			tileData["version"] = tileVersion + 1
+
+			#Save result
+			cPickle.dump(tileData, open(tilePath, "wt"))
+
 
 # ****************** Main class **********************
 
@@ -179,63 +340,22 @@ class ZiggDb(object):
 	
 	def __init__(self, repos, basePath):
 		self.repos = repos
-		self.basePath = basePath
+		for repoName in self.repos:
+			self.repos[repoName].SetBasePath(basePath)
 
 	def GenerateTestData(self):
 
 		for repoName in self.repos:
-			repoData = self.repos[repoName]
-			repoZoom = repoData[1]
-			repoPath = repoData[4]
-
-			for x in range(repoData[2][0], repoData[3][0]):
-
-				colPath = os.path.join(self.basePath, repoPath, str(x))
-				if not os.path.exists(colPath):
-					os.makedirs(colPath)
-
-				for y in range(repoData[2][1], repoData[3][1]):
-					
-					tilePath = os.path.join(self.basePath, repoPath, str(x), str(y)+".dat")
-					#if os.path.exists(tilePath): continue
-
-					tl = slippy.num2deg(x, y, repoZoom)
-					br =  slippy.num2deg(x + 1, y + 1, repoZoom)
-
-					commonNode = uuid.uuid4().bytes
-
-					ziggArea = {}
-					ziggArea["nodes"] = {}
-					nodeId = uuid.uuid4().bytes
-					ziggArea["nodes"][nodeId] = [[[[[Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), nodeId]],None]],
-						{"name": "special place"}]
-					ziggArea["ways"] = {}
-					ziggArea["ways"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .2), Interp(tl[1], br[1], .2), uuid.uuid4().bytes], 
-						[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .5), commonNode], 
-						[Interp(tl[0], br[0], .3), Interp(tl[1], br[1], .23), uuid.uuid4().bytes]], None]],
-						{"name": "path"}]
-					ziggArea["areas"] = {}
-					ziggArea["areas"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .4), uuid.uuid4().bytes], 
-						[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .5), commonNode], 
-						[Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .5), uuid.uuid4().bytes], 
-						[Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .4), uuid.uuid4().bytes]], []]],
-						{"name": "test area"}]
-
-					cPickle.dump(ziggArea, open(tilePath, "wt"))
-
-
+			repo = self.repos[repoName]
+			repo.GenerateTestData()
 
 	def _FindRelevantRepos(self, bbox):
 		#Find relevant repos
 		relevantRepos = []
 		for repoName in self.repos:
-			repoData = self.repos[repoName]
-			repoZoom = repoData[1]
-			tl = slippy.num2deg(repoData[2][0], repoData[2][1], repoZoom)
-			br =  slippy.num2deg(repoData[3][0], repoData[3][1], repoZoom)
+			repo = self.repos[repoName]
 
-			within = CheckRectOverlap([tl[1], br[0], br[1], tl[0]], bbox)
-			if within:
+			if repo.IsRelevant(bbox):
 				relevantRepos.append(repoName)
 		return relevantRepos
 
@@ -248,32 +368,8 @@ class ZiggDb(object):
 		versionInfo = {}
 
 		for repoName in relevantRepos:
-			repoData = self.repos[repoName]
-			repoZoom = repoData[1]
-			repoPath = repoData[4]
-			countTiles = 0
-			tileVersions = {}
-			for x in range(repoData[2][0], repoData[3][0]):
-				for y in range(repoData[2][1], repoData[3][1]):
-					tl = slippy.num2deg(x, y, repoZoom)
-					br =  slippy.num2deg(x + 1, y + 1, repoZoom)
-					within = CheckRectOverlap([tl[1], br[0], br[1], tl[0]], bbox)
-					if not within: continue
-
-					tilePath = os.path.join(self.basePath, repoPath, str(x), str(y)+".dat")
-					if not os.path.exists(tilePath): continue
-
-					tileData = cPickle.load(open(tilePath, "rt"))
-
-					merged["nodes"].update(tileData["nodes"])
-					merged["ways"].update(tileData["ways"])
-					merged["areas"].update(tileData["areas"])
-					countTiles += 1
-
-					if "version" in tileData:
-						tileVersions[(x, y)] = tileData["version"]
-					else:
-						tileVersions[(x, y)] = 1
+			repo = self.repos[repoName]
+			tileVersions = repo.GetTiles(merged, bbox)
 
 			versionInfo[repoName] = tileVersions
 
@@ -284,88 +380,9 @@ class ZiggDb(object):
 		relevantRepos = self._FindRelevantRepos(bbox)
 
 		#Update tiles in relevant repos
-		bbox = area["active"]
 		for repoName in relevantRepos:
-			repoData = self.repos[repoName]
-			repoZoom = repoData[1]
-			repoPath = repoData[4]
-
-			tilesToUpdate = set()
-
-			#Get tiles in active area			
-			for x in range(repoData[2][0], repoData[3][0]):
-				for y in range(repoData[2][1], repoData[3][1]):
-					tl = slippy.num2deg(x, y, repoZoom)
-					br =  slippy.num2deg(x + 1, y + 1, repoZoom)
-					touchesActive = CheckRectOverlap([tl[1], br[0], br[1], tl[0]], bbox)
-
-					if not touchesActive: continue
-					tilesToUpdate.add((x, y))
-
-			#Get tiles that may be affected
-			for objType in currentArea:
-				if objType == "active": continue
-				if objType == "versionInfo": continue
-				objDict = currentArea[objType]
-				for objId in objDict:
-					pts = []
-					objData = objDict[objId]
-					objShapes, objTags = objData
-					for shape in objShapes:
-						outer, inners = shape
-						pts.extend(outer)
-						if inners is None: continue
-						for inner in inners:
-							pts.extend(outer)
-
-					for pt in pts:
-						tilexy = tuple(map(int, slippy.deg2num(pt[0], pt[1], repoZoom)))
-						tilesToUpdate.add(tilexy)
-
-			#Update tiles
-			for x, y in tilesToUpdate:
-
-				tilePath = os.path.join(self.basePath, repoPath, str(x), str(y)+".dat")
-				if not os.path.exists(tilePath): continue
-
-				tileData = cPickle.load(open(tilePath, "rt"))
-				if "version" in tileData:
-					tileVersion = tileData["version"]
-				else:
-					tileVersion = 1
-
-				#Remove existing objects that are entirely inside active area
-				tileData["nodes"] = FindPartlyOutside(tileData["nodes"], bbox)
-				tileData["ways"] = FindPartlyOutside(tileData["ways"], bbox)
-				tileData["areas"] = FindPartlyOutside(tileData["areas"], bbox)
-
-				#Add new objects that are entirely inside active area
-				nodesInside = FindEntirelyInside(area["nodes"], bbox)
-				waysInside = FindEntirelyInside(area["ways"], bbox)
-				areasInside = FindEntirelyInside(area["areas"], bbox)
-
-				tileData["nodes"].update(nodesInside)
-				tileData["ways"].update(waysInside)
-				tileData["areas"].update(areasInside)
-			
-				#Update objects that are partially outside
-				for objId in area["nodes"]:
-					if objId in nodesInside: continue
-					tileData["nodes"][objId] = area["nodes"][objId]
-
-				for objId in area["ways"]:
-					if objId in waysInside: continue
-					tileData["ways"][objId] = area["ways"][objId]
-
-				for objId in area["areas"]:
-					if objId in areasInside: continue
-					tileData["areas"][objId] = area["areas"][objId]
-
-				#Increment version
-				tileData["version"] = tileVersion + 1
-
-				#Save result
-				cPickle.dump(tileData, open(tilePath, "wt"))
+			repo = self.repos[repoName]
+			repo.SetTiles(currentArea, area)
 
 	def GetArea(self, bbox):
 		if len(bbox) != 4: 
@@ -871,5 +888,7 @@ class ZiggDb(object):
 		return changes
 
 	def Verify(self, bbox):
+		#merged, versionInfo = _GetTilesFromRepos(self, bbox)
+
 		return "TODO Verify DB", str(bbox)
 
