@@ -17,14 +17,14 @@ def CheckPointInRect(pt, rect):
 	if rect[0] > rect[2] or rect[1] > rect[3]:
 		raise ValueError("Invalid rectangle")
 
-	if pt[1] < rect[0] or pt[1] > rect[2]: return 2
-	if pt[0] < rect[1] or pt[0] > rect[3]: return 3
+	if pt[1] < rect[0] or pt[1] > rect[2]: return 0
+	if pt[0] < rect[1] or pt[0] > rect[3]: return 0
 	return 1
 
 def Interp(a, b, frac):
 	return a * frac + b * (1. - frac)
 
-def FindPartlyOutside(objsDict, bbox):
+def FindPartlyOutside(objsDict, bbox, verbose = 0):
 	out = {}
 	for objId in objsDict:
 		objData = objsDict[objId]
@@ -38,6 +38,7 @@ def FindPartlyOutside(objsDict, bbox):
 				if not CheckPointInRect(pt, bbox):
 					found = True
 					break
+
 			if not found and inners is not None:
 				for inner in inners:
 					for pt in inners:
@@ -46,7 +47,7 @@ def FindPartlyOutside(objsDict, bbox):
 							break
 					if found:
 						break
-					
+
 		if found != False:
 			out[objId] = objData
 	return out

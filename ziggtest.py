@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
 	#Add point outside active area (not allowed)
 	userInfo = {}
-	newNode = [[[[[51.11, -0.272, -1]], None]], {'name': 'another place'}]
+	newNode = [[[[[51.11, -0.272, -1]], None]], {'name': 'far away place'}]
 	area["nodes"][-1] = newNode
 	ex = False
 	try:
