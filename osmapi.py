@@ -555,6 +555,9 @@ def UpdateBbox(bbox, pt):
 
 class ApiChangesetUpload(object):
 
+	def GET(self, cid):
+		return None #Not allowed
+
 	def POST(self, cid):
 		return self.Render(cid)
 
@@ -564,6 +567,10 @@ class ApiChangesetUpload(object):
 		nodePosDb = web.ctx.nodePosDb
 		wayDb = web.ctx.wayDb
 		ziggDb = web.ctx.ziggDb
+		webInput = web.input()
+		debug = 0
+		if "debug" in webInput:
+			debug = int(webInput["debug"])
 
 		activeArea = [None, None, None, None]
 
@@ -869,6 +876,10 @@ class ApiChangesetUpload(object):
 
 		for wid in delObjs["ways"]:
 			out.append(u'<way old_id="{0}"/>\n'.format(wid))
+
+		if logging:
+			fi.write("modObjs: {0}\n".format(modObjs))
+			fi.write("delObjs: {0}\n".format(delObjs))
 
 		out.append(u'</diffResult>\n')
 

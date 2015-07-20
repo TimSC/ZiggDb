@@ -53,14 +53,15 @@ def DeleteSingleNode(nid, cid, userpass, lat, lon, save, verbose=0):
 	deleteNode = '<osmChange version="0.6" generator="JOSM">' +\
 	"<delete>\n" +\
 	"  <node id='"+str(nid)+"' version='1' "+\
-	"changeset='"+str(cid)+"' lat='"+str(lat)+"'  lon='"+str(lon)+"' />\n"+\
+	"changeset='"+str(cid)+"' lat='"+str(lat)+"' lon='"+str(lon)+"' />\n"+\
 	"</delete>\n"+\
 	"</osmChange>\n"
-	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteNode,userpass)
+	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload?debug=1",deleteNode,userpass)
 	if verbose>=2: print response
-	if save: open("mod.html", "wt").write(response[0])
+	if save: open("del.html", "wt").write(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
 	diff = InterpretUploadResponse(response[0])
+	return (1, "OK")
 
 def TestMultiObjectEditing(userpass, verbose=0, save=False):
 
@@ -304,9 +305,12 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
 	if len(response[0]) > 0: print response[0]
 
-	DeleteSingleNode(nodeId1, cid, userpass, lat[2], lon[2], save, verbose)
-	DeleteSingleNode(nodeId2, cid, userpass, lat[1], lon[1], save, verbose)
-	DeleteSingleNode(nodeId3, cid, userpass, lat[3], lon[3], save, verbose)
+	ret, msg = DeleteSingleNode(nodeId1, cid, userpass, lat[2], lon[2], save, verbose)
+	if not ret: return ret, msg
+	ret, msg = DeleteSingleNode(nodeId2, cid, userpass, lat[1], lon[1], save, verbose)
+	if not ret: return ret, msg
+	ret, msg = DeleteSingleNode(nodeId3, cid, userpass, lat[3], lon[3], save, verbose)
+	if not ret: return ret, msg
 
 	#Close changeset
 	if verbose>=1: print "Close changeset"
