@@ -339,7 +339,28 @@ class ZiggRepo(object):
 			cPickle.dump(tileData, open(tilePath, "wt"))
 
 	def Verify(self, bbox):
-		return None
+		
+		msgs = []
+
+		for x in range(self.corner1[0], self.corner2[0]):
+			for y in range(self.corner1[1], self.corner2[1]):
+				tl = slippy.num2deg(x, y, self.zoom)
+				br =  slippy.num2deg(x + 1, y + 1, self.zoom)
+				tileBounds = [tl[1], br[0], br[1], tl[0]]
+				within = CheckRectOverlap(tileBounds, bbox)
+				if not within: continue
+
+				tilePath = os.path.join(self.basePath, self.path, str(x), str(y)+".dat")
+				if not os.path.exists(tilePath): continue
+
+				tileData = cPickle.load(open(tilePath, "rt"))
+
+				#Check objects are within tile
+				msgs.append("Error: {0} node(s) entirely outside tile {1} {2} {3}".format(len(FindEntirelyInside(tileData["nodes"], tileBounds)), x, y, tileBounds))
+				msgs.append("Error: {0} ways(s) entirely outside tile {1} {2} {3}".format(len(FindEntirelyInside(tileData["areas"], tileBounds)), x, y, tileBounds))
+				msgs.append("Error: {0} areas(s) entirely outside tile {1} {2} {3}".format(len(FindEntirelyInside(tileData["ways"], tileBounds)), x, y, tileBounds))
+
+		return msgs
 
 # ****************** Main ZiggDb class **********************
 
@@ -899,9 +920,10 @@ class ZiggDb(object):
 		relevantRepos = self._FindRelevantRepos(bbox)
 
 		#Verify relevant repos
+		msgs = []
 		for repoName in relevantRepos:
 			repo = self.repos[repoName]
-			repo.Verify(bbox)
+			msgs.extend(repo.Verify(bbox))
 
-		return "TODO Verify DB", str(bbox)
+		return "\n".join(msgs)
 
