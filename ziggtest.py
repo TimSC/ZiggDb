@@ -642,6 +642,9 @@ if __name__ == "__main__":
 	else:
 		testPass += 1
 
+	#Verify data integrity
+	result = ziggDb.Verify([-0.3, 51.12, -0.19, 51.17])
+
 	print "Tests passed", testPass
 	print "Tests failed", testFail
 
