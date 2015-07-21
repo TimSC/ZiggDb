@@ -356,9 +356,15 @@ class ZiggRepo(object):
 				tileData = cPickle.load(open(tilePath, "rt"))
 
 				#Check objects are within tile
-				msgs.append("Error: {0} node(s) entirely outside tile {1} {2} {3}".format(len(FindEntirelyInside(tileData["nodes"], tileBounds)), x, y, tileBounds))
-				msgs.append("Error: {0} ways(s) entirely outside tile {1} {2} {3}".format(len(FindEntirelyInside(tileData["areas"], tileBounds)), x, y, tileBounds))
-				msgs.append("Error: {0} areas(s) entirely outside tile {1} {2} {3}".format(len(FindEntirelyInside(tileData["ways"], tileBounds)), x, y, tileBounds))
+				chk = FindEntirelyInside(tileData["nodes"], tileBounds)
+				if len(chk) > 0:
+					msgs.append("Error: {0} node(s) entirely outside tile {1} {2} {3}".format(len(chk), x, y, tileBounds))
+				chk = FindEntirelyInside(tileData["ways"], tileBounds)
+				if len(chk) > 0:
+					msgs.append("Error: {0} ways(s) entirely outside tile {1} {2} {3}".format(len(chk), x, y, tileBounds))
+				chk = FindEntirelyInside(tileData["areas"], tileBounds)
+				if len(chk) > 0:
+					msgs.append("Error: {0} areas(s) entirely outside tile {1} {2} {3}".format(len(chk), x, y, tileBounds))
 
 		return msgs
 

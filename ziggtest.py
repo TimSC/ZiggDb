@@ -10,7 +10,16 @@ if __name__ == "__main__":
 
 	ziggDb = zigg.ZiggDb(config.repos, os.path.dirname(__file__))
 
+	#Verify data integrity
+	result = ziggDb.Verify([-0.3, 51.12, -0.19, 51.17])
+	print result
+
+	#Generate test data
 	ziggDb.GenerateTestData()
+
+	#Verify data integrity
+	result = ziggDb.Verify([-0.3, 51.12, -0.19, 51.17])
+	print result
 
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 
@@ -34,6 +43,10 @@ if __name__ == "__main__":
 		print "Unexpected differences discovered when adding node"
 		print diffs
 		ok = False
+
+	#Verify data integrity
+	result = ziggDb.Verify([-0.3, 51.12, -0.19, 51.17])
+	print result
 	
 	#Check node ID has been updated
 	nodeId2 = nodeData[0][0][0][0][2]
@@ -134,7 +147,11 @@ if __name__ == "__main__":
 		print "Unexpected lack of exception when adding node with wrong ID"
 	else:
 		testPass += 1
-	
+
+	#Verify data integrity
+	result = ziggDb.Verify([-0.3, 51.12, -0.19, 51.17])
+	print result
+		
 	#Modify node by changing its UUID (not allowed)
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 	nodeId1 = area["nodes"].keys()[0]
@@ -644,6 +661,7 @@ if __name__ == "__main__":
 
 	#Verify data integrity
 	result = ziggDb.Verify([-0.3, 51.12, -0.19, 51.17])
+	print result
 
 	print "Tests passed", testPass
 	print "Tests failed", testFail

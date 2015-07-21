@@ -138,6 +138,12 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
 	if len(response[0]) > 0: print response[0]
 
+	#Verify underlying database integrity in this area
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/verifydb?bbox={0}".format(",".join(map(str, bbox))))
+	if len(response[0]) > 0: print response[0]
+	if save: open("verify.html", "wt").write(response[0])
+
 	#######################################################################
 
 	if verbose>=1: print "Open changeset"
@@ -186,6 +192,12 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	bbox = [min(lon), min(lat), max(lon), max(lat)]
 	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
 	if len(response[0]) > 0: print response[0]
+
+	#Verify underlying database integrity in this area
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/verifydb?bbox={0}".format(",".join(map(str, bbox))))
+	if len(response[0]) > 0: print response[0]
+	if save: open("verify.html", "wt").write(response[0])
 
 	#######################################################################
 
@@ -242,6 +254,12 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
 	if len(response[0]) > 0: print response[0]
 
+	#Verify underlying database integrity in this area
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/verifydb?bbox={0}".format(",".join(map(str, bbox))))
+	if len(response[0]) > 0: print response[0]
+	if save: open("verify.html", "wt").write(response[0])
+
 	########### Modify child nodes ##################
 
 	if verbose>=1: print "Open changeset"
@@ -283,6 +301,12 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	bbox = [min(lon), min(lat), max(lon), max(lat)]
 	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
 	if len(response[0]) > 0: print response[0]
+
+	#Verify underlying database integrity in this area
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/verifydb?bbox={0}".format(",".join(map(str, bbox))))
+	if len(response[0]) > 0: print response[0]
+	if save: open("verify.html", "wt").write(response[0])
 
 	#######################################################################
 
