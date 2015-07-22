@@ -58,8 +58,8 @@ if __name__ == "__main__":
 		print "Verify result 3:", result
 		testFail += 1
 	else:
-		testPass += 1
-	
+		testPass += 1	
+
 	#Check node ID has been updated
 	nodeId2 = nodeData[0][0][0][0][2]
 	if nodeId != nodeId2:

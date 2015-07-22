@@ -293,9 +293,8 @@ class ZiggRepo(object):
 		#Get tiles in active area			
 		for x in range(self.corner1[0], self.corner2[0]):
 			for y in range(self.corner1[1], self.corner2[1]):
-				tl = slippy.num2deg(x, y, self.zoom)
-				br =  slippy.num2deg(x + 1, y + 1, self.zoom)
-				touchesActive = CheckRectOverlap([tl[1], br[0], br[1], tl[0]], bbox)
+				tileBounds = self.GetTileBounds(x, y, self.zoom)
+				touchesActive = CheckRectOverlap(tileBounds, bbox)
 
 				if not touchesActive: continue
 				tilesToUpdate.add((x, y))
@@ -332,31 +331,36 @@ class ZiggRepo(object):
 			else:
 				tileVersion = 1
 
-			#Remove existing objects that are entirely inside active area
-			tileData["nodes"] = FindPartlyOutside(tileData["nodes"], bbox)
-			tileData["ways"] = FindPartlyOutside(tileData["ways"], bbox)
-			tileData["areas"] = FindPartlyOutside(tileData["areas"], bbox)
+			tileBounds = self.GetTileBounds(x, y, self.zoom)
 
-			#Add new objects that are entirely inside active area
-			nodesInside = FindEntirelyInside(area["nodes"], bbox)
-			waysInside = FindEntirelyInside(area["ways"], bbox)
-			areasInside = FindEntirelyInside(area["areas"], bbox)
+			#Remove all existing objects that are entirely inside tile
+			tileData["nodes"] = FindPartlyOutside(tileData["nodes"], tileBounds)
+			tileData["ways"] = FindPartlyOutside(tileData["ways"], tileBounds)
+			tileData["areas"] = FindPartlyOutside(tileData["areas"], tileBounds)
+
+			#Add new objects that are entirely inside tile
+			nodesInside = FindEntirelyInside(area["nodes"], tileBounds)
+			waysInside = FindEntirelyInside(area["ways"], tileBounds)
+			areasInside = FindEntirelyInside(area["areas"], tileBounds)
 
 			tileData["nodes"].update(nodesInside)
 			tileData["ways"].update(waysInside)
 			tileData["areas"].update(areasInside)
-		
-			#Update objects that are partially outside
-			for objId in area["nodes"]:
-				if objId in nodesInside: continue
-				tileData["nodes"][objId] = area["nodes"][objId]
 
+			#Identify objects that are partially inside
+			waysPartlyInside = FindPartlyOutside(tileData["ways"], tileBounds)
+			areasPartlyInside = FindPartlyOutside(tileData["areas"], tileBounds)
+		
+			#For existing objects that are partially outside, update object from new area data
+			#Note that nodes cannot be partially outside
 			for objId in area["ways"]:
 				if objId in waysInside: continue
+				if objId not in waysPartlyInside: continue
 				tileData["ways"][objId] = area["ways"][objId]
 
 			for objId in area["areas"]:
 				if objId in areasInside: continue
+				if objId not in areasPartlyInside: continue
 				tileData["areas"][objId] = area["areas"][objId]
 
 			#Increment version
@@ -365,15 +369,18 @@ class ZiggRepo(object):
 			#Save result
 			cPickle.dump(tileData, open(tilePath, "wt"))
 
+	def GetTileBounds(self, x, y, zo):
+		tl = slippy.num2deg(x, y, zo)
+		br =  slippy.num2deg(x + 1, y + 1, zo)
+		return [tl[1], br[0], br[1], tl[0]]
+
 	def Verify(self, bbox):
 		
 		msgs = []
 
 		for x in range(self.corner1[0], self.corner2[0]):
 			for y in range(self.corner1[1], self.corner2[1]):
-				tl = slippy.num2deg(x, y, self.zoom)
-				br =  slippy.num2deg(x + 1, y + 1, self.zoom)
-				tileBounds = [tl[1], br[0], br[1], tl[0]]
+				tileBounds = self.GetTileBounds(x, y, self.zoom)
 				within = CheckRectOverlap(tileBounds, bbox)
 				if not within: continue
 
@@ -386,13 +393,13 @@ class ZiggRepo(object):
 				chk = FindEntirelyOutside(tileData["nodes"], tileBounds)
 				if len(chk) > 0:
 					msgs.append("Error: {0} node(s) entirely outside tile {1} {2} {3}".format(len(chk), x, y, tileBounds))
-					#msgs.append(str(chk))
+					msgs.append(str(chk))
 				chk = FindEntirelyOutside(tileData["ways"], tileBounds)
 				if len(chk) > 0:
-					msgs.append("Error: {0} ways(s) entirely outside tile {1} {2} {3}".format(len(chk), x, y, tileBounds))
+					msgs.append("Error: {0} way(s) entirely outside tile {1} {2} {3}".format(len(chk), x, y, tileBounds))
 				chk = FindEntirelyOutside(tileData["areas"], tileBounds)
 				if len(chk) > 0:
-					msgs.append("Error: {0} areas(s) entirely outside tile {1} {2} {3}".format(len(chk), x, y, tileBounds))
+					msgs.append("Error: {0} area(s) entirely outside tile {1} {2} {3}".format(len(chk), x, y, tileBounds))
 
 		return msgs
 
