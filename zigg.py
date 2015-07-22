@@ -13,7 +13,6 @@ def CheckRectOverlap(rect1, rect2):
 
 def CheckPointInRect(pt, rect):
 	#left,bottom,right,top
-
 	if rect[0] > rect[2] or rect[1] > rect[3]:
 		raise ValueError("Invalid rectangle")
 
@@ -76,6 +75,34 @@ def FindEntirelyInside(objsDict, bbox):
 						break
 					
 		if found != True:
+			out[objId] = objData
+	return out
+
+def FindEntirelyOutside(objsDict, bbox, verbose = 0):
+	out = {}
+	for objId in objsDict:
+		objData = objsDict[objId]
+		shapes = objData[0]
+		tags = objData[1]
+		found = False
+		for shape in shapes:
+			outer, inners = shape
+		
+			for pt in outer:
+				if CheckPointInRect(pt, bbox):
+					found = True
+					break
+
+			if not found and inners is not None:
+				for inner in inners:
+					for pt in inners:
+						if CheckPointInRect(pt, bbox):
+							found = True
+							break
+					if found:
+						break
+
+		if found == False:
 			out[objId] = objData
 	return out
 
@@ -356,13 +383,14 @@ class ZiggRepo(object):
 				tileData = cPickle.load(open(tilePath, "rt"))
 
 				#Check objects are within tile
-				chk = FindEntirelyInside(tileData["nodes"], tileBounds)
+				chk = FindEntirelyOutside(tileData["nodes"], tileBounds)
 				if len(chk) > 0:
 					msgs.append("Error: {0} node(s) entirely outside tile {1} {2} {3}".format(len(chk), x, y, tileBounds))
-				chk = FindEntirelyInside(tileData["ways"], tileBounds)
+					#msgs.append(str(chk))
+				chk = FindEntirelyOutside(tileData["ways"], tileBounds)
 				if len(chk) > 0:
 					msgs.append("Error: {0} ways(s) entirely outside tile {1} {2} {3}".format(len(chk), x, y, tileBounds))
-				chk = FindEntirelyInside(tileData["areas"], tileBounds)
+				chk = FindEntirelyOutside(tileData["areas"], tileBounds)
 				if len(chk) > 0:
 					msgs.append("Error: {0} areas(s) entirely outside tile {1} {2} {3}".format(len(chk), x, y, tileBounds))
 

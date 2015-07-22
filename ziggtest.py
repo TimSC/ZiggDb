@@ -12,14 +12,22 @@ if __name__ == "__main__":
 
 	#Verify data integrity
 	result = ziggDb.Verify([-0.3, 51.12, -0.19, 51.17])
-	print result
+	if len(result) > 0: 
+		print "Verify result 1:", result
+		testFail += 1
+	else:
+		testPass += 1
 
 	#Generate test data
 	ziggDb.GenerateTestData()
 
 	#Verify data integrity
 	result = ziggDb.Verify([-0.3, 51.12, -0.19, 51.17])
-	print result
+	if len(result) > 0: 
+		print "Verify result 2:", result
+		testFail += 1
+	else:
+		testPass += 1
 
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 
@@ -46,7 +54,11 @@ if __name__ == "__main__":
 
 	#Verify data integrity
 	result = ziggDb.Verify([-0.3, 51.12, -0.19, 51.17])
-	print result
+	if len(result) > 0: 
+		print "Verify result 3:", result
+		testFail += 1
+	else:
+		testPass += 1
 	
 	#Check node ID has been updated
 	nodeId2 = nodeData[0][0][0][0][2]
@@ -150,7 +162,11 @@ if __name__ == "__main__":
 
 	#Verify data integrity
 	result = ziggDb.Verify([-0.3, 51.12, -0.19, 51.17])
-	print result
+	if len(result) > 0: 
+		print "Verify result 4:", result
+		testFail += 1
+	else:
+		testPass += 1
 		
 	#Modify node by changing its UUID (not allowed)
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
@@ -661,7 +677,12 @@ if __name__ == "__main__":
 
 	#Verify data integrity
 	result = ziggDb.Verify([-0.3, 51.12, -0.19, 51.17])
-	print result
+	if len(result) > 0: 
+		print "Verify result 5:", result
+		testFail += 1
+	else:
+		testPass += 1
+
 
 	print "Tests passed", testPass
 	print "Tests failed", testFail
