@@ -29,25 +29,66 @@ def FindPartlyOutside(objsDict, bbox, verbose = 0):
 		objData = objsDict[objId]
 		shapes = objData[0]
 		tags = objData[1]
-		found = False
+		foundOutside = False
+		foundInside = False
 		for shape in shapes:
 			outer, inners = shape
 		
 			for pt in outer:
 				if not CheckPointInRect(pt, bbox):
-					found = True
+					foundOutside = True
+				else:
+					foundInside = True
+				if foundOutside and foundInside:
 					break
 
-			if not found and inners is not None:
+			if not (foundOutside and foundInside) and inners is not None:
 				for inner in inners:
 					for pt in inners:
 						if not CheckPointInRect(pt, bbox):
-							found = True
+							foundOutside = True
+						else:
+							foundInside = True
+						if foundOutside and foundInside:
 							break
-					if found:
+					if foundOutside and foundInside:
 						break
 
-		if found != False:
+		if foundOutside and foundInside:
+			out[objId] = objData
+	return out
+
+def FindInsideOrPartlyInside(objsDict, bbox, verbose = 0):
+	out = {}
+	for objId in objsDict:
+		objData = objsDict[objId]
+		shapes = objData[0]
+		tags = objData[1]
+		foundInside = False
+		for shape in shapes:
+			outer, inners = shape
+		
+			for pt in outer:
+				if not CheckPointInRect(pt, bbox):
+					pass
+				else:
+					foundInside = True
+				if foundInside:
+					break
+
+			if not foundInside and inners is not None:
+				for inner in inners:
+					for pt in inners:
+						if not CheckPointInRect(pt, bbox):
+							pass
+						else:
+							foundInside = True
+						if foundInside:
+							break
+					if foundInside:
+						break
+
+		if foundInside:
 			out[objId] = objData
 	return out
 
@@ -57,24 +98,32 @@ def FindEntirelyInside(objsDict, bbox):
 		objData = objsDict[objId]
 		shapes = objData[0]
 		tags = objData[1]
-		found = False
+		foundOutside = False
+		foundInside = False
 		for shape in shapes:
 			outer, inners = shape
 		
 			for pt in outer:
 				if not CheckPointInRect(pt, bbox):
-					found = True
+					foundOutside = True
+				else:
+					foundInside = True
+				if foundOutside:
 					break
-			if not found and inners is not None:
+
+			if not (foundOutside and foundInside) and inners is not None:
 				for inner in inners:
 					for pt in inners:
 						if not CheckPointInRect(pt, bbox):
-							found = True
+							foundOutside = True
+						else:
+							foundInside = True
+						if foundOutside:
 							break
-					if found:
+					if foundOutside:
 						break
-					
-		if found != True:
+
+		if not foundOutside and foundInside:
 			out[objId] = objData
 	return out
 
@@ -84,25 +133,25 @@ def FindEntirelyOutside(objsDict, bbox, verbose = 0):
 		objData = objsDict[objId]
 		shapes = objData[0]
 		tags = objData[1]
-		found = False
+		foundInside = False
 		for shape in shapes:
 			outer, inners = shape
 		
 			for pt in outer:
 				if CheckPointInRect(pt, bbox):
-					found = True
+					foundInside = True
 					break
 
-			if not found and inners is not None:
+			if not foundInside and inners is not None:
 				for inner in inners:
 					for pt in inners:
 						if CheckPointInRect(pt, bbox):
-							found = True
+							foundInside = True
 							break
-					if found:
+					if foundInside:
 						break
 
-		if found == False:
+		if not foundInside:
 			out[objId] = objData
 	return out
 
@@ -286,7 +335,7 @@ class ZiggRepo(object):
 
 		return tileVersions
 
-	def SetTiles(self, currentArea, area):
+	def SetTiles(self, currentArea, area, debug = False):
 		tilesToUpdate = set()
 		bbox = area["active"]
 
@@ -338,19 +387,19 @@ class ZiggRepo(object):
 			tileData["ways"] = FindPartlyOutside(tileData["ways"], tileBounds)
 			tileData["areas"] = FindPartlyOutside(tileData["areas"], tileBounds)
 
-			#Add new objects that are entirely inside tile
-			nodesInside = FindEntirelyInside(area["nodes"], tileBounds)
-			waysInside = FindEntirelyInside(area["ways"], tileBounds)
-			areasInside = FindEntirelyInside(area["areas"], tileBounds)
+			#Add new objects that are entirely inside tile or partly inside
+			nodesInside = FindInsideOrPartlyInside(area["nodes"], tileBounds)
+			waysInside = FindInsideOrPartlyInside(area["ways"], tileBounds)
+			areasInside = FindInsideOrPartlyInside(area["areas"], tileBounds)
 
 			tileData["nodes"].update(nodesInside)
 			tileData["ways"].update(waysInside)
 			tileData["areas"].update(areasInside)
 
-			#Identify objects that are partially inside
+			#Identify existing objects that are partially inside
 			waysPartlyInside = FindPartlyOutside(tileData["ways"], tileBounds)
 			areasPartlyInside = FindPartlyOutside(tileData["areas"], tileBounds)
-		
+
 			#For existing objects that are partially outside, update object from new area data
 			#Note that nodes cannot be partially outside
 			for objId in area["ways"]:
@@ -362,6 +411,10 @@ class ZiggRepo(object):
 				if objId in areasInside: continue
 				if objId not in areasPartlyInside: continue
 				tileData["areas"][objId] = area["areas"][objId]
+
+			#Identify new objects that are partially inside
+			#newWaysPartlyInside = FindPartlyOutside(area["ways"], tileBounds)
+			#newAreasPartlyInside = FindPartlyOutside(area["areas"], tileBounds)
 
 			#Increment version
 			tileData["version"] = tileVersion + 1
@@ -444,14 +497,14 @@ class ZiggDb(object):
 
 		return merged, versionInfo
 
-	def _SetTilesInRepos(self, currentArea, area):
+	def _SetTilesInRepos(self, currentArea, area, debug = False):
 		bbox = area["active"]
 		relevantRepos = self._FindRelevantRepos(bbox)
 
 		#Update tiles in relevant repos
 		for repoName in relevantRepos:
 			repo = self.repos[repoName]
-			repo.SetTiles(currentArea, area)
+			repo.SetTiles(currentArea, area, debug)
 
 	def GetArea(self, bbox):
 		if len(bbox) != 4: 
@@ -948,7 +1001,7 @@ class ZiggDb(object):
 		#If we have reached here, we are ready to update the working copy
 
 		#print "Updating working copy"
-		self._SetTilesInRepos(currentArea, newArea)
+		self._SetTilesInRepos(currentArea, newArea, debug)
 		
 		
 		

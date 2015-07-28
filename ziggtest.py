@@ -376,14 +376,16 @@ if __name__ == "__main__":
 	pt2 = (zigg.Interp(tl[0], br[0], 0.5), zigg.Interp(tl[1], br[1], 0.75))
 
 	area["ways"][-1] = [[[[[pt1[0], pt1[1], -1], [pt2[0], pt2[1], -2]], None]], {'name': 'spanning road'}]
-	idChanges = ziggDb.SetArea(area, userInfo)
+	idChanges = ziggDb.SetArea(area, userInfo, 1)
 	newWayId = idChanges["ways"].values()[0]
 	ok = True
-	area1 = ziggDb.GetArea([tl[1]+0.0001, br[0]+0.0001, mid[1]-0.0001, tl[0]-0.0001])
+	area1bbox = [tl[1]+0.0001, br[0]+0.0001, mid[1]-0.0001, tl[0]-0.0001]
+	area1 = ziggDb.GetArea(area1bbox)
 	if newWayId not in area1["ways"]:
 		print "Expected way missing in tile"
 		ok = False
-	area2 = ziggDb.GetArea([mid[1]+0.0001, br[0]+0.0001, br[1]-0.0001, mid[0]-0.0001])
+	area2bbox = [mid[1]+0.0001, br[0]+0.0001, br[1]-0.0001, mid[0]-0.0001]
+	area2 = ziggDb.GetArea(area2bbox)
 	if newWayId not in area2["ways"]:
 		print "Expected way missing in tile"
 		ok = False
