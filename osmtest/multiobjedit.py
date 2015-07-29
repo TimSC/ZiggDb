@@ -330,13 +330,17 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if len(response[0]) > 0: print response[0]
 
 	#Verify underlying database integrity in this area
-	bbox = [min(lon), min(lat), max(lon), max(lat)]
 	response = Get(conf.baseurl+"/0.6/verifydb?bbox={0}".format(",".join(map(str, bbox))))
 	if len(response[0]) > 0: print response[0]
 	if save: open("verify.html", "wt").write(response[0])
 
+	#Do internal checks the way has gone
+	urlStr = conf.baseurl+"/0.6/way/{0}?bbox={1}".format(wayId, ",".join(map(str, bbox)))
+	print urlStr
+	response = Get(urlStr)
+	print response[0]
+
 	#Check the way really has gone
-	bbox = [min(lon), min(lat), max(lon), max(lat)]
 	response = Get(conf.baseurl+"/0.6/map?bbox={0}".format(",".join(map(str, bbox))))
 	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error reading back area")

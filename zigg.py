@@ -23,6 +23,11 @@ def CheckPointInRect(pt, rect):
 def Interp(a, b, frac):
 	return a * frac + b * (1. - frac)
 
+def bin2hex(binn):
+	import string
+	sonuc = binn.encode('hex')
+	return sonuc
+
 def FindPartlyOutside(objsDict, bbox, verbose = 0):
 	out = {}
 	for objId in objsDict:
@@ -308,7 +313,7 @@ class ZiggRepo(object):
 
 		return CheckRectOverlap([tl[1], br[0], br[1], tl[0]], bbox)		
 
-	def GetTiles(self, merged, bbox):
+	def GetTiles(self, merged, bbox, debug = False):
 		countTiles = 0
 		tileVersions = {}
 		for x in range(self.corner1[0], self.corner2[0]):
@@ -322,6 +327,10 @@ class ZiggRepo(object):
 				if not os.path.exists(tilePath): continue
 
 				tileData = cPickle.load(open(tilePath, "rt"))
+				if debug:
+					fi = open("/var/www/ZiggDb/osmtest/test.txt", "at")
+					fi.write(str(tileData)+"\n")
+					fi.flush()
 
 				merged["nodes"].update(tileData["nodes"])
 				merged["ways"].update(tileData["ways"])
@@ -458,6 +467,32 @@ class ZiggRepo(object):
 
 		return msgs
 
+	def CheckForObject(self, bbox, uuid):
+		
+		msgs = []
+		for x in range(self.corner1[0], self.corner2[0]):
+			for y in range(self.corner1[1], self.corner2[1]):
+
+				#Get boundary of tile, etc
+				tileBounds = self.GetTileBounds(x, y, self.zoom)
+				within = CheckRectOverlap(tileBounds, bbox)
+				if not within: continue
+
+				tilePath = os.path.join(self.basePath, self.path, str(x), str(y)+".dat")
+				if not os.path.exists(tilePath): continue
+
+				tileData = cPickle.load(open(tilePath, "rt"))
+
+				#Check objects are within tile
+				if uuid in tileData["nodes"]:
+					msgs.append("Found! node {0} {1} {2}".format(x, y, bin2hex(uuid)))
+				if uuid in tileData["ways"]:
+					msgs.append("Found! way {0} {1} {2}".format(x, y, bin2hex(uuid)))
+				if uuid in tileData["areas"]:
+					msgs.append("Found! area {0} {1} {2}".format(x, y, bin2hex(uuid)))
+
+		return msgs
+
 # ****************** Main ZiggDb class **********************
 
 class ZiggDb(object):
@@ -483,7 +518,7 @@ class ZiggDb(object):
 				relevantRepos.append(repoName)
 		return relevantRepos
 
-	def _GetTilesFromRepos(self, bbox):
+	def _GetTilesFromRepos(self, bbox, debug = False):
 
 		relevantRepos = self._FindRelevantRepos(bbox)
 
@@ -493,7 +528,7 @@ class ZiggDb(object):
 
 		for repoName in relevantRepos:
 			repo = self.repos[repoName]
-			tileVersions = repo.GetTiles(merged, bbox)
+			tileVersions = repo.GetTiles(merged, bbox, debug)
 
 			versionInfo[repoName] = tileVersions
 
@@ -508,7 +543,7 @@ class ZiggDb(object):
 			repo = self.repos[repoName]
 			repo.SetTiles(currentArea, area, debug)
 
-	def GetArea(self, bbox):
+	def GetArea(self, bbox, debug = False):
 		if len(bbox) != 4: 
 			raise ValueError("bbox should have 4 values")
 		try:
@@ -519,7 +554,7 @@ class ZiggDb(object):
 		if bbox[0] > bbox[2] or bbox[1] > bbox[3]:
 			raise ValueError("Invalid bbox")
 
-		merged, versionInfo = self._GetTilesFromRepos(bbox)
+		merged, versionInfo = self._GetTilesFromRepos(bbox, debug)
 
 		#print merged["nodes"]["'ir\xeem\xa8I\x7f\x83\x06\x1c\xfa\xa8\xd4\x04\xb1"]
 
@@ -1018,6 +1053,17 @@ class ZiggDb(object):
 		for repoName in relevantRepos:
 			repo = self.repos[repoName]
 			msgs.extend(repo.Verify(bbox))
+
+		return "\n".join(msgs)
+
+	def CheckForObject(self, bbox, nuuid, debug = False):
+		relevantRepos = self._FindRelevantRepos(bbox)
+
+		#Verify relevant repos
+		msgs = []
+		for repoName in relevantRepos:
+			repo = self.repos[repoName]
+			msgs.extend(repo.CheckForObject(bbox, nuuid))
 
 		return "\n".join(msgs)
 

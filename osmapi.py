@@ -278,9 +278,12 @@ class ApiMap(object):
 		wayDb = web.ctx.wayDb
 		idAssignment = IdAssignment()
 		writeOldPos = False
+		debug = 0
+		if "debug" in webInput:
+			debug = int(webInput["debug"])
 
 		bbox = map(float, webInput["bbox"].split(","))
-		area = ziggDb.GetArea(bbox)
+		area = ziggDb.GetArea(bbox, debug)
 		nodesWritten = set()
 
 		out = [u"<?xml version='1.0' encoding='UTF-8'?>\n"]
@@ -338,6 +341,34 @@ class ApiMap(object):
 
 		web.header('Content-Type', 'text/xml')
 		return "".join(out).encode("utf-8")
+
+class ApiGetObject(object):
+	def GET(self, objId):
+		#Add a global lock TODO
+		return self.Render(int(objId))
+
+	def POST(self, objId):
+		#Add a global lock TODO
+		return self.Render(int(objId))
+
+	def Render(self, objId):
+		webInput = web.input()
+		ziggDb = web.ctx.ziggDb
+		nodePosDb = web.ctx.nodePosDb
+		wayDb = web.ctx.wayDb
+		idAssignment = IdAssignment()
+		writeOldPos = False
+		debug = 0
+		if "debug" in webInput:
+			debug = int(webInput["debug"])
+		bbox = None
+		if "bbox" in webInput:
+			bbox = map(float, webInput["bbox"].split(","))
+
+		nuuid = idAssignment.GetUuidFromId("way", objId)	
+
+		result = ziggDb.CheckForObject(bbox, nuuid, debug)
+		return "".join(result).encode("utf-8")
 
 class ApiVerifyCache(object):
 	def GET(self):
@@ -464,7 +495,6 @@ class ApiChangesetCreate(object):
 		cid = idAssignment.AssignId("changeset")
 		webInput = web.input()
 		webData = web.data()
-
 
 		requestNum = idAssignment.AssignId("request")
 		curdir = os.path.dirname(__file__)
@@ -1048,6 +1078,7 @@ urls = (
 	'/api/0.6/changeset/([0-9]+)', 'ApiChangeset',
 	'/api/0.6/changeset/([0-9]+)/upload', 'ApiChangesetUpload',
 	'/api/0.6/changeset/([0-9]+)/close', 'ApiChangesetClose',
+	'/api/0.6/way/([0-9]+)', 'ApiGetObject',
 	'/', 'ApiBase'
 	)
 
