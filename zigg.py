@@ -433,6 +433,8 @@ class ZiggRepo(object):
 
 		for x in range(self.corner1[0], self.corner2[0]):
 			for y in range(self.corner1[1], self.corner2[1]):
+
+				#Get boundary of tile, etc
 				tileBounds = self.GetTileBounds(x, y, self.zoom)
 				within = CheckRectOverlap(tileBounds, bbox)
 				if not within: continue
@@ -1001,9 +1003,7 @@ class ZiggDb(object):
 		#If we have reached here, we are ready to update the working copy
 
 		#print "Updating working copy"
-		self._SetTilesInRepos(currentArea, newArea, debug)
-		
-		
+		self._SetTilesInRepos(currentArea, newArea, debug)	
 		
 		#=Commit with userInfo details=
 

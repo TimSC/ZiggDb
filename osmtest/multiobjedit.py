@@ -56,7 +56,7 @@ def DeleteSingleNode(nid, cid, userpass, lat, lon, save, verbose=0):
 	"changeset='"+str(cid)+"' lat='"+str(lat)+"' lon='"+str(lon)+"' />\n"+\
 	"</delete>\n"+\
 	"</osmChange>\n"
-	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload?debug=1",deleteNode,userpass)
+	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteNode,userpass)
 	if verbose>=2: print response
 	if save: open("del.html", "wt").write(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error deleting node")
@@ -310,7 +310,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 
 	#######################################################################
 
-	if verbose>=1: print "Delete way"
+	if verbose>=1: print "Delete way", wayId
 	deleteWay = '<osmChange version="0.6" generator="JOSM">'+"\n"+\
 	"<delete>\n"+\
 	"  <way id='"+str(wayId)+"' version='1' changeset='"+str(cid)+"'/>\n"+\
@@ -335,6 +335,16 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if len(response[0]) > 0: print response[0]
 	if save: open("verify.html", "wt").write(response[0])
 
+	#Check the way really has gone
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/map?bbox={0}".format(",".join(map(str, bbox))))
+	if verbose>=2: print response
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error reading back area")
+	data = InterpretDownloadedArea(response[0])
+	if wayId in data["way"]:
+		return (0,"Error way was not deleted")
+
+	#Delete the remaining nodes
 	ret, msg = DeleteSingleNode(nodeId1, cid, userpass, lat[2], lon[2], save, verbose)
 	if not ret: return ret, msg
 	ret, msg = DeleteSingleNode(nodeId2, cid, userpass, lat[1], lon[1], save, verbose)

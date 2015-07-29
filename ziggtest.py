@@ -106,7 +106,7 @@ if __name__ == "__main__":
 	area["nodes"][-1] = newNode
 	ex = False
 	try:
-		idChanges = ziggDb.SetArea(area, userInfo, 1)
+		idChanges = ziggDb.SetArea(area, userInfo)
 	except ValueError as err:
 		ex = True
 	if not ex:

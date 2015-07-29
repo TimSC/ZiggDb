@@ -183,10 +183,16 @@ def OsmToZigg(idAssignment, osmData):
 		for memId, memRole, memType in objMems:
 			if memType != "way": continue
 
-			wayMems, wayData = osmData["way"][memId]
+			try:
+				wayMems, wayData = osmData["way"][memId]
+			except KeyError:
+				raise RuntimeError("Way data missing from internal calculation")
 			wayShape = []
 			for pt in wayMems:
-				ptShape, ptData = osmData["node"][pt]
+				try:
+					ptShape, ptData = osmData["node"][pt]
+				except KeyError:
+					raise RuntimeError("Node data missing from internal calculation")
 				if pt > 0:
 					ptUuid = idAssignment.GetUuidFromId("node", pt)
 					if ptUuid is None: raise ValueError("Unknown node")
@@ -225,7 +231,10 @@ def OsmToZigg(idAssignment, osmData):
 		
 		wayShape = []
 		for pt in objMems:
-			ptShape, ptData = osmData["node"][pt]
+			try:
+				ptShape, ptData = osmData["node"][pt]
+			except KeyError:
+				raise RuntimeError("Node data missing from internal calculation")
 			if pt > 0:
 				ptUuid = idAssignment.GetUuidFromId("node", pt)
 				if ptUuid is None: raise ValueError("Unknown node")
@@ -834,7 +843,7 @@ class ApiChangesetUpload(object):
 
 		#Update database with new data
 		userInfo = {}
-		idDiff = ziggDb.SetArea(updatedArea, userInfo)
+		idDiff = ziggDb.SetArea(updatedArea, userInfo, debug)
 		
 		#Return updated IDs to client
 		out = []
