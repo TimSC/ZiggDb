@@ -889,9 +889,9 @@ class ZiggDb(object):
 		
 		#==Check no shape modifications/deletions/additions are made outside active bbox==
 		#All nodes should be witin active area, be existing or not
-		partlyOutsideNodes = FindPartlyOutside(area["nodes"], bbox)
+		partlyOutsideNodes = FindEntirelyOutside(area["nodes"], bbox)
 		if len(partlyOutsideNodes) > 0:
-			raise ValueError("Nodes cannot be added outside active area")	
+			raise ValueError("Nodes cannot be added outside active area")
 
 		#All new ways and area member nodes should be within active area
 		for objType in ["ways", "areas"]:
