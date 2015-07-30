@@ -11,6 +11,29 @@ def CheckRectOverlap(rect1, rect2):
 	if rect1[3] < rect2[1]: return 0
 	return 1
 
+def UpdateBbox(bbox, pt):
+	#left,bottom,right,top
+	if bbox[0] is None:
+		bbox[0] = pt[1]
+	elif pt[1] < bbox[0]:
+		bbox[0] = pt[1]
+	if bbox[2] is None:
+		bbox[2] = pt[1]
+	elif pt[1] > bbox[2]:
+		bbox[2] = pt[1]
+
+	if bbox[1] is None:
+		bbox[1] = pt[0]
+	elif pt[0] < bbox[1]:
+		bbox[1] = pt[0]
+	if bbox[3] is None:
+		bbox[3] = pt[0]
+	elif pt[0] > bbox[3]:
+		bbox[3] = pt[0]
+
+	assert bbox[0] <= bbox[2] 
+	assert bbox[1] <= bbox[3]
+
 def CheckPointInRect(pt, rect):
 	#left,bottom,right,top
 	if rect[0] > rect[2] or rect[1] > rect[3]:
@@ -256,6 +279,24 @@ def ApplyIdChanges(area, idChanges):
 							continue
 						pt[2] = nodeChanges[ptId]
 
+def ObjectExpectedInTiles(objData, zo):
+	shapes = objData[0]
+	tags = objData[1]
+	tileXYSet = set()
+	for shape in shapes:
+		outer, inners = shape
+		
+		for pt in outer:
+			x, y = slippy.deg2num(pt[0], pt[1], zo)
+			tileXYSet.add((int(x), int(y)))
+
+		if inners is not None:
+			for inner in inners:
+				for pt in inners:
+					x, y = slippy.deg2num(pt[0], pt[1], zo)
+					tileXYSet.add((int(x), int(y)))
+	return tileXYSet	
+
 # ****************** ZiggRepo class **********************
 
 class ZiggRepo(object):
@@ -439,6 +480,7 @@ class ZiggRepo(object):
 	def Verify(self, bbox):
 		
 		msgs = []
+		dataTiles = {}
 
 		for x in range(self.corner1[0], self.corner2[0]):
 			for y in range(self.corner1[1], self.corner2[1]):
@@ -465,6 +507,22 @@ class ZiggRepo(object):
 				if len(chk) > 0:
 					msgs.append("Error: {0} area(s) entirely outside tile {1} {2} {3}".format(len(chk), x, y, tileBounds))
 
+				dataTiles[(x, y)] = tileData
+
+		#Check objects are consistent across tiles
+		for (xA, yA) in dataTiles:
+			dataTileA = dataTiles[(xA, yA)]
+			for uuid in dataTileA["ways"]:
+				wayObj = dataTileA["ways"][uuid]
+				tileXYSet = ObjectExpectedInTiles(wayObj, self.zoom)
+
+				for xB, yB in tileXYSet:
+					if xA == xB and yA == yB: continue #Skip this
+					if (xB, yB) not in dataTiles: continue #Tile probably outside repo
+				
+					if uuid not in dataTileB["ways"]:
+						msgs.append("Missing way in tile!")
+
 		return msgs
 
 	def CheckForObject(self, bbox, uuid):
@@ -488,6 +546,7 @@ class ZiggRepo(object):
 					msgs.append("Found! node {0} {1} {2}".format(x, y, bin2hex(uuid)))
 				if uuid in tileData["ways"]:
 					msgs.append("Found! way {0} {1} {2}".format(x, y, bin2hex(uuid)))
+					msgs.append(str(tileData["ways"][uuid]))
 				if uuid in tileData["areas"]:
 					msgs.append("Found! area {0} {1} {2}".format(x, y, bin2hex(uuid)))
 

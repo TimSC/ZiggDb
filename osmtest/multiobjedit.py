@@ -335,7 +335,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if save: open("verify.html", "wt").write(response[0])
 
 	#Do internal checks the way has gone
-	urlStr = conf.baseurl+"/0.6/way/{0}?bbox={1}".format(wayId, ",".join(map(str, bbox)))
+	urlStr = conf.baseurl+"/0.6/way/{0}?bbox={1}&debug=1".format(wayId, ",".join(map(str, bbox)))
 	print urlStr
 	response = Get(urlStr)
 	print response[0]

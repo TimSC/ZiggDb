@@ -569,29 +569,6 @@ class ApiChangeset(object):
 		web.header('Content-Type', 'text/xml')
 		return "bonk"
 
-def UpdateBbox(bbox, pt):
-	#left,bottom,right,top
-	if bbox[0] is None:
-		bbox[0] = pt[1]
-	elif pt[1] < bbox[0]:
-		bbox[0] = pt[1]
-	if bbox[2] is None:
-		bbox[2] = pt[1]
-	elif pt[1] > bbox[2]:
-		bbox[2] = pt[1]
-
-	if bbox[1] is None:
-		bbox[1] = pt[0]
-	elif pt[0] < bbox[1]:
-		bbox[1] = pt[0]
-	if bbox[3] is None:
-		bbox[3] = pt[0]
-	elif pt[0] > bbox[3]:
-		bbox[3] = pt[0]
-
-	assert bbox[0] <= bbox[2] 
-	assert bbox[1] <= bbox[3]
-
 class ApiChangesetUpload(object):
 
 	def GET(self, cid):
@@ -640,14 +617,14 @@ class ApiChangesetUpload(object):
 						objLat = float(el.attrib["lat"])
 						objLon = float(el.attrib["lon"])
 		
-						UpdateBbox(activeArea, [objLat, objLon])
+						zigg.UpdateBbox(activeArea, [objLat, objLon])
 
 					nid = int(el.attrib["id"])
 					if nid >= 0: 
 						#Ignore negative nodes since they have no original position
 						pos = nodePosDb[nid]
 					
-						UpdateBbox(activeArea, pos[:2])
+						zigg.UpdateBbox(activeArea, pos[:2])
 
 				tagDict = {}
 				for ch in el:
@@ -660,7 +637,7 @@ class ApiChangesetUpload(object):
 					nid = int(ch.attrib["ref"])
 					if nid < 0: continue #Ignore negative nodes since they have no original position
 					pos = nodePosDb[nid]
-					UpdateBbox(activeArea, pos)
+					zigg.UpdateBbox(activeArea, pos)
 
 				#Deleting objects requires us to get the relevant children
 				if method == "delete" and objTy == "way" and objId > 0:
@@ -670,7 +647,7 @@ class ApiChangesetUpload(object):
 
 					for nid in nodesInWay:
 						nPos = nodePosDb[int(nid)]
-						UpdateBbox(activeArea, nPos)
+						zigg.UpdateBbox(activeArea, nPos)
 
 				#Get nodes in relation (not sure if this is really meaningful with incomplete 
 				#implementation - what about ways?)
@@ -681,7 +658,7 @@ class ApiChangesetUpload(object):
 					nid = int(ch.attrib["ref"])
 					if nid < 0: continue #Ignore negative nodes since they have no original position
 					pos = nodePosDb[nid]
-					UpdateBbox(activeArea, pos)
+					zigg.UpdateBbox(activeArea, pos)
 
 		if logging:
 			fi.write("Unpadded"+str(activeArea)+"\n")

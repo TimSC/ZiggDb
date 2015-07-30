@@ -456,7 +456,7 @@ if __name__ == "__main__":
 
 	#Add point to way that crosses repo boundary (allowed)
 
-
+	#Have same node occur twice in succession in way (not allowed?)
 
 	#Move a node in a way outside the active area (silently ignored)
 	bbox = [-0.3, 51.12, -0.19, 51.17]
