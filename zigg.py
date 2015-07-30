@@ -519,7 +519,7 @@ class ZiggRepo(object):
 				for xB, yB in tileXYSet:
 					if xA == xB and yA == yB: continue #Skip this
 					if (xB, yB) not in dataTiles: continue #Tile probably outside repo
-				
+					dataTileB = dataTiles[(xB, yB)]
 					if uuid not in dataTileB["ways"]:
 						msgs.append("Missing way in tile!")
 
@@ -530,7 +530,7 @@ class ZiggRepo(object):
 				for xB, yB in tileXYSet:
 					if xA == xB and yA == yB: continue #Skip this
 					if (xB, yB) not in dataTiles: continue #Tile probably outside repo
-				
+					dataTileB = dataTiles[(xB, yB)]
 					if uuid not in dataTileB["areas"]:
 						msgs.append("Missing area in tile!")
 		return msgs
