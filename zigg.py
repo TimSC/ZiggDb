@@ -72,7 +72,7 @@ def FindPartlyOutside(objsDict, bbox, verbose = 0):
 
 			if not (foundOutside and foundInside) and inners is not None:
 				for inner in inners:
-					for pt in inners:
+					for pt in inner:
 						if not CheckPointInRect(pt, bbox):
 							foundOutside = True
 						else:
@@ -106,7 +106,7 @@ def FindInsideOrPartlyInside(objsDict, bbox, verbose = 0):
 
 			if not foundInside and inners is not None:
 				for inner in inners:
-					for pt in inners:
+					for pt in inner:
 						if not CheckPointInRect(pt, bbox):
 							pass
 						else:
@@ -141,7 +141,7 @@ def FindEntirelyInside(objsDict, bbox):
 
 			if not (foundOutside and foundInside) and inners is not None:
 				for inner in inners:
-					for pt in inners:
+					for pt in inner:
 						if not CheckPointInRect(pt, bbox):
 							foundOutside = True
 						else:
@@ -172,7 +172,7 @@ def FindEntirelyOutside(objsDict, bbox, verbose = 0):
 
 			if not foundInside and inners is not None:
 				for inner in inners:
-					for pt in inners:
+					for pt in inner:
 						if CheckPointInRect(pt, bbox):
 							foundInside = True
 							break
@@ -199,7 +199,7 @@ def Trim(objsDict, bbox, invert = False):
 					break
 			if not found and inners is not None:
 				for inner in inners:
-					for pt in inners:
+					for pt in inner:
 						if CheckPointInRect(pt, bbox):
 							found = True
 							break
@@ -292,7 +292,7 @@ def ObjectExpectedInTiles(objData, zo):
 
 		if inners is not None:
 			for inner in inners:
-				for pt in inners:
+				for pt in inner:
 					x, y = slippy.deg2num(pt[0], pt[1], zo)
 					tileXYSet.add((int(x), int(y)))
 	return tileXYSet	
@@ -523,6 +523,16 @@ class ZiggRepo(object):
 					if uuid not in dataTileB["ways"]:
 						msgs.append("Missing way in tile!")
 
+			for uuid in dataTileA["areas"]:
+				wayObj = dataTileA["areas"][uuid]
+				tileXYSet = ObjectExpectedInTiles(wayObj, self.zoom)
+
+				for xB, yB in tileXYSet:
+					if xA == xB and yA == yB: continue #Skip this
+					if (xB, yB) not in dataTiles: continue #Tile probably outside repo
+				
+					if uuid not in dataTileB["areas"]:
+						msgs.append("Missing area in tile!")
 		return msgs
 
 	def CheckForObject(self, bbox, uuid):
