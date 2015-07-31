@@ -587,6 +587,13 @@ class ApiChangesetUpload(object):
 		debug = 0
 		if "debug" in webInput:
 			debug = int(webInput["debug"])
+		debug2 = 0
+		if "debug2" in webInput:
+			debug2 = webInput["debug2"]
+
+		debugUuid = None
+		if debug:
+			debugUuid = idAssignment.GetUuidFromId("way", int(debug2))	
 
 		activeArea = [None, None, None, None]
 
@@ -685,7 +692,7 @@ class ApiChangesetUpload(object):
 			raise RuntimeError("Invalid bbox")
 
 		#Retrieve active area
-		activeData = ziggDb.GetArea(activeArea)
+		activeData = ziggDb.GetArea(activeArea, debug)
 
 		#Convert active area to osm style representation
 		osmData = ZiggToOsm(idAssignment, activeData)
@@ -850,7 +857,7 @@ class ApiChangesetUpload(object):
 
 		#Update database with new data
 		userInfo = {}
-		idDiff = ziggDb.SetArea(updatedArea, userInfo, debug)
+		idDiff = ziggDb.SetArea(updatedArea, userInfo, debug, debugUuid)
 		
 		#Return updated IDs to client
 		out = []

@@ -1,4 +1,4 @@
-import cPickle, uuid, slippy, os, copy, exceptions
+import cPickle, uuid, slippy, os, copy, exceptions, json
 
 # ********* Utilities *************
 
@@ -385,7 +385,7 @@ class ZiggRepo(object):
 
 		return tileVersions
 
-	def SetTiles(self, currentArea, area, debug = False):
+	def SetTiles(self, currentArea, area, debug = False, debug2 = None):
 		tilesToUpdate = set()
 		bbox = area["active"]
 
@@ -417,6 +417,10 @@ class ZiggRepo(object):
 				for pt in pts:
 					tilexy = tuple(map(int, slippy.deg2num(pt[0], pt[1], self.zoom)))
 					tilesToUpdate.add(tilexy)
+
+		fi=open("/var/www/ZiggDb/osmtest/relevant-{0}.log".format(self.name), "wt")
+		fi.write(str(tilesToUpdate))
+		fi.flush()
 
 		#Update tiles
 		for x, y in tilesToUpdate:
@@ -465,6 +469,10 @@ class ZiggRepo(object):
 			#Identify new objects that are partially inside
 			#newWaysPartlyInside = FindPartlyOutside(area["ways"], tileBounds)
 			#newAreasPartlyInside = FindPartlyOutside(area["areas"], tileBounds)
+
+			if debug:
+				a = debug2 in tileData["ways"]
+				assert 0
 
 			#Increment version
 			tileData["version"] = tileVersion + 1
@@ -603,14 +611,14 @@ class ZiggDb(object):
 
 		return merged, versionInfo
 
-	def _SetTilesInRepos(self, currentArea, area, debug = False):
+	def _SetTilesInRepos(self, currentArea, area, debug = False, debug2 = None):
 		bbox = area["active"]
 		relevantRepos = self._FindRelevantRepos(bbox)
 
 		#Update tiles in relevant repos
 		for repoName in relevantRepos:
 			repo = self.repos[repoName]
-			repo.SetTiles(currentArea, area, debug)
+			repo.SetTiles(currentArea, area, debug, debug2)
 
 	def GetArea(self, bbox, debug = False):
 		if len(bbox) != 4: 
@@ -1107,7 +1115,7 @@ class ZiggDb(object):
 		#If we have reached here, we are ready to update the working copy
 
 		#print "Updating working copy"
-		self._SetTilesInRepos(currentArea, newArea, debug)	
+		self._SetTilesInRepos(currentArea, newArea, debug, debug2)	
 		
 		#=Commit with userInfo details=
 
