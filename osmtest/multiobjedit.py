@@ -317,7 +317,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	"</delete>\n"+\
 	"</osmChange>\n"
 
-	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload?debug=1&debug2={0}".format(wayId),deleteWay,userpass)
+	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",deleteWay,userpass)
 	if verbose>=2: print response
 	if save: open("del.html", "wt").write(response[0])
 	diff = InterpretUploadResponse(response[0])
@@ -335,12 +335,12 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if save: open("verify.html", "wt").write(response[0])
 
 	#Do internal checks the way has gone
-	urlStr = conf.baseurl+"/0.6/way/{0}?bbox={1}&debug=1".format(wayId, ",".join(map(str, bbox)))
+	urlStr = conf.baseurl+"/0.6/way/{0}?bbox={1}".format(wayId, ",".join(map(str, bbox)))
 	response = Get(urlStr)
 	if save: open("check.html", "wt").write(response[0])
 
 	#Check the way really has gone
-	response = Get(conf.baseurl+"/0.6/map?bbox={0}&debug=1".format(",".join(map(str, bbox))))
+	response = Get(conf.baseurl+"/0.6/map?bbox={0}".format(",".join(map(str, bbox))))
 	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error reading back area")
 	data = InterpretDownloadedArea(response[0])

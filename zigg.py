@@ -418,10 +418,6 @@ class ZiggRepo(object):
 					tilexy = tuple(map(int, slippy.deg2num(pt[0], pt[1], self.zoom)))
 					tilesToUpdate.add(tilexy)
 
-		fi=open("/var/www/ZiggDb/osmtest/relevant-{0}.log".format(self.name), "wt")
-		fi.write(str(tilesToUpdate))
-		fi.flush()
-
 		#Update tiles
 		for x, y in tilesToUpdate:
 
@@ -436,10 +432,10 @@ class ZiggRepo(object):
 
 			tileBounds = self.GetTileBounds(x, y, self.zoom)
 
-			#Remove all existing objects that are entirely inside tile
-			tileData["nodes"] = FindPartlyOutside(tileData["nodes"], tileBounds)
-			tileData["ways"] = FindPartlyOutside(tileData["ways"], tileBounds)
-			tileData["areas"] = FindPartlyOutside(tileData["areas"], tileBounds)
+			#Remove all existing objects that are not outside tile
+			tileData["nodes"] = FindEntirelyOutside(tileData["nodes"], bbox)
+			tileData["ways"] = FindEntirelyOutside(tileData["ways"], bbox)
+			tileData["areas"] = FindEntirelyOutside(tileData["areas"], bbox)
 
 			#Add new objects that are entirely inside tile or partly inside
 			nodesInside = FindInsideOrPartlyInside(area["nodes"], tileBounds)
@@ -469,10 +465,6 @@ class ZiggRepo(object):
 			#Identify new objects that are partially inside
 			#newWaysPartlyInside = FindPartlyOutside(area["ways"], tileBounds)
 			#newAreasPartlyInside = FindPartlyOutside(area["areas"], tileBounds)
-
-			if debug:
-				a = debug2 in tileData["ways"]
-				assert 0
 
 			#Increment version
 			tileData["version"] = tileVersion + 1

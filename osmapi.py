@@ -591,10 +591,6 @@ class ApiChangesetUpload(object):
 		if "debug2" in webInput:
 			debug2 = webInput["debug2"]
 
-		debugUuid = None
-		if debug:
-			debugUuid = idAssignment.GetUuidFromId("way", int(debug2))	
-
 		activeArea = [None, None, None, None]
 
 		logging = True
@@ -857,7 +853,7 @@ class ApiChangesetUpload(object):
 
 		#Update database with new data
 		userInfo = {}
-		idDiff = ziggDb.SetArea(updatedArea, userInfo, debug, debugUuid)
+		idDiff = ziggDb.SetArea(updatedArea, userInfo, debug)
 		
 		#Return updated IDs to client
 		out = []
