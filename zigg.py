@@ -990,7 +990,7 @@ class ZiggDb(object):
 
 		for areaId in partlyOutsideAreas:
 			#areaData = partlyOutsideWays[areaId]
-			if wayId not in area["ways"]:
+			if areaId not in area["areas"]:
 				raise ValueError("Area in input missing which should still exist")
 		
 		#==Check no shape modifications/deletions/additions are made outside active bbox==
