@@ -67,6 +67,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 
 	log = open("log.txt", "wt")
 
+	# ********** Create a way with two nodes ***************
 	if verbose>=1: print "Open changeset"
 	#Create a changeset
 	createChangeset = "<?xml version='1.0' encoding='UTF-8'?>\n" +\
@@ -144,7 +145,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if len(response[0]) > 0: print response[0]
 	if save: open("verify.html", "wt").write(response[0])
 
-	#######################################################################
+	#***************** Translate a node within a way ******************
 
 	if verbose>=1: print "Open changeset"
 	#Open another changeset
@@ -199,7 +200,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if len(response[0]) > 0: print response[0]
 	if save: open("verify.html", "wt").write(response[0])
 
-	#######################################################################
+	#**************** Modify way's tags *********************
 
 	if verbose>=1: print "Open changeset"
 	#Open another changeset
@@ -260,7 +261,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if len(response[0]) > 0: print response[0]
 	if save: open("verify.html", "wt").write(response[0])
 
-	########### Modify child nodes ##################
+	#************* Modify child nodes of a way ******************
 
 	if verbose>=1: print "Open changeset"
 	#Open another changeset
@@ -308,7 +309,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if len(response[0]) > 0: print response[0]
 	if save: open("verify.html", "wt").write(response[0])
 
-	#######################################################################
+	#*********** Delete way and nodes *********************
 
 	if verbose>=1: print "Delete way", wayId
 	deleteWay = '<osmChange version="0.6" generator="JOSM">'+"\n"+\
@@ -381,6 +382,112 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	bbox = [min(lon), min(lat), max(lon), max(lat)]
 	response = Get(conf.baseurl+"/0.6/verifydb?bbox={0}".format(",".join(map(str, bbox))))
 	if len(response[0]) > 0: print response[0]
+
+
+	#************ Area operations *******************
+
+	if verbose>=1: print "Open changeset"
+	#Create a changeset
+	createChangeset = "<?xml version='1.0' encoding='UTF-8'?>\n" +\
+	"<osm version='0.6' generator='JOSM'>\n" +\
+	"  <changeset  id='0' open='false'>\n" +\
+	"    <tag k='comment' v='python test function' />\n" +\
+	"    <tag k='created_by' v='JOSM/1.5 (3592 en_GB)' />\n" +\
+	"  </changeset>\n" +\
+	"</osm>\n"
+
+	response = Put(conf.baseurl+"/0.6/changeset/create",createChangeset,userpass)
+	if verbose>=2: print response
+	cid = int(response[0])
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating changeset")
+
+	lat = [51.22203966503958, 51.219443198163034, 51.22001505165771]
+	lon = [0.41224712359411547, 0.413727688103378, 0.4109146155357791]
+
+	if verbose>=1: print "Create an initial node"
+	#Create a way between two nodes
+	create = "<?xml version='1.0' encoding='UTF-8'?>\n" +\
+	"<osmChange version='0.6' generator='JOSM'>\n" +\
+	"<create version='0.6' generator='JOSM'>\n" +\
+	"  <node id='-289' changeset='{0}' lat='{1}' lon='{2}' />\n".format(cid, lat[0], lon[0]) +\
+	"</create>\n" +\
+	"</osmChange>\n"
+	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",create,userpass)
+	if verbose>=2: print response
+	if save: open("add.html", "wt").write(response[0])
+	if log is not None: 
+		log.write(response[1])
+		log.write(response[0])
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating node")
+	
+	diff = InterpretUploadResponse(response[0])
+	nodeId1 = int(diff["node"][-289]["new_id"])
+
+	if verbose>=1: print "Create an area between three nodes"
+	#Create a way between two nodes
+	create = "<?xml version='1.0' encoding='UTF-8'?>\n" +\
+	"<osmChange version='0.6' generator='JOSM'>\n" +\
+	"<create version='0.6' generator='JOSM'>\n" +\
+	"  <node id='-2008' changeset='{0}' lat='{1}' lon='{2}' />\n".format(cid, lat[1], lon[1])+\
+	"  <node id='-356' changeset='{0}' lat='{1}' lon='{2}' />\n".format(cid, lat[2], lon[2])+\
+	"  <way id='-2010' changeset='"+str(cid)+"'>\n"+\
+	"    <nd ref='{0}' />\n".format(nodeId1)+\
+	"    <nd ref='-2008' />\n"+\
+	"    <nd ref='-356' />\n"+\
+	"    <nd ref='{0}' />\n".format(nodeId1)+\
+	"    <tag k='natural' v='water' />\n"+\
+	"  </way>\n"+\
+	"</create>\n" +\
+	"</osmChange>\n"
+	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",create,userpass)
+	if verbose>=2: print response
+	if save: open("add.html", "wt").write(response[0])
+	if log is not None: 
+		log.write(response[1])
+		log.write(response[0])
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating node")
+	
+	diff = InterpretUploadResponse(response[0])
+	nodeId2 = int(diff["node"][-2008]["new_id"])
+	nodeId3 = int(diff["node"][-356]["new_id"])
+	wayId = int(diff["way"][-2010]["new_id"])
+
+	if verbose>=1: print "Close changeset"
+	#Close the changeset
+	response = Put(conf.baseurl+"/0.6/changeset/"+str(cid)+"/close","",userpass)
+	if verbose>=2: print response
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
+
+	#Read back area containing data
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/map?bbox={0}".format(",".join(map(str, bbox))))
+	if verbose>=2: print response
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error reading back area")
+	data = InterpretDownloadedArea(response[0])
+	node1Readback = data["node"][nodeId1]
+	if not CheckNodePosition(node1Readback, lat[0], lon[0]):
+		return (0,"Error node has bad position")
+	node2Readback = data["node"][nodeId2]
+	if not CheckNodePosition(node2Readback, lat[1], lon[1]):
+		return (0,"Error node has bad position")
+	node3Readback = data["node"][nodeId3]
+	if not CheckNodePosition(node3Readback, lat[1], lon[1]):
+		return (0,"Error node has bad position")
+	wayReadback = data["way"][wayId]
+	if not CheckWayHasChildNodes(wayReadback, [nodeId1, nodeId2, nodeId3]):
+		return (0,"Error way has incorrect child nodes")
+
+	#Verify cache in this area
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
+	if len(response[0]) > 0: print response[0]
+
+	#Verify underlying database integrity in this area
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/verifydb?bbox={0}".format(",".join(map(str, bbox))))
+	if len(response[0]) > 0: print response[0]
+	if save: open("verify.html", "wt").write(response[0])
+
 
 	return (1,"OK")
 
