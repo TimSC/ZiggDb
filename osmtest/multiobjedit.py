@@ -298,6 +298,23 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	#wayDb = SqliteDict('../data/wayDb.sqlite', autocommit=True)
 	#print wayDb[wayId]
 
+	#Read back area containing data
+	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/map?bbox={0}".format(",".join(map(str, bbox))))
+	if verbose>=2: print response
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error reading back area")
+	data = InterpretDownloadedArea(response[0])
+
+	countNodes = 0
+	for el in data["way"][wayId]:
+		if el.tag == "nd": countNodes += 1
+	if countNodes != 3:
+		return (0,"Error: way has incorrect number of child nodes")
+
+	wayReadback = data["way"][wayId]
+	if not CheckWayHasChildNodes(wayReadback, [nodeId1, nodeId2, nodeId3]):
+		return (0,"Error way has incorrect child nodes")
+
 	#Verify cache in this area
 	bbox = [min(lon), min(lat), max(lon), max(lat)]
 	response = Get(conf.baseurl+"/0.6/verifycache?bbox={0}".format(",".join(map(str, bbox))))
@@ -476,6 +493,12 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	wayReadback = data["way"][wayId]
 	if not CheckWayHasChildNodes(wayReadback, [nodeId1, nodeId2, nodeId3]):
 		return (0,"Error way has incorrect child nodes")
+
+	countNodes = 0
+	for el in data["way"][wayId]:
+		if el.tag == "nd": countNodes += 1
+	if countNodes != 4:
+		return (0,"Error: way has incorrect number of child nodes")
 
 	#Verify cache in this area
 	bbox = [min(lon), min(lat), max(lon), max(lat)]
