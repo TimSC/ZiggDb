@@ -471,7 +471,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if not CheckNodePosition(node2Readback, lat[1], lon[1]):
 		return (0,"Error node has bad position")
 	node3Readback = data["node"][nodeId3]
-	if not CheckNodePosition(node3Readback, lat[1], lon[1]):
+	if not CheckNodePosition(node3Readback, lat[2], lon[2]):
 		return (0,"Error node has bad position")
 	wayReadback = data["way"][wayId]
 	if not CheckWayHasChildNodes(wayReadback, [nodeId1, nodeId2, nodeId3]):
