@@ -138,6 +138,8 @@ def ZiggToOsm(idAssignment, area):
 		nodeIds = []
 		for pt in outer:
 			nodeIds.append(idAssignment.AssignId("node", pt[2]))
+		if len(outer) >= 2:
+			nodeIds.append(idAssignment.AssignId("node", outer[0][2])) #Close the area
 		osmWays[wayOuterId] = (nodeIds, objData)
 
 		#Writer inner ways
@@ -148,6 +150,8 @@ def ZiggToOsm(idAssignment, area):
 				nodeIds = []
 				for pt in inner:
 					nodeIds.append(idAssignment.AssignId("node", pt[2]))
+				if len(inner) >= 2:
+					nodeIds.append(idAssignment.AssignId("node", inner[0][2]))
 				osmWays[oid] = (nodeIds, objData)
 				wayInnersIds.append(oid)
 
