@@ -462,7 +462,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if log is not None: 
 		log.write(response[1])
 		log.write(response[0])
-	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating node")
+	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating area")
 	
 	diff = InterpretUploadResponse(response[0])
 	nodeId2 = int(diff["node"][-2008]["new_id"])

@@ -262,7 +262,7 @@ def OsmToZigg(idAssignment, osmData):
 			if len(ptData) == 0:
 				accounted["node"].add(pt)
 
-		ziggAreas[wayUuid] = [[[wayShape, None]], objData]
+		ziggAreas[wayUuid] = [[[wayShape, []]], objData]
 		accounted["way"].add(oid)
 
 	#Process remaining ways
@@ -928,6 +928,17 @@ class ApiChangesetUpload(object):
 			modTag.append(u'/>\n')
 			out.append("".join(modTag))
 
+		for wid in idDiff["areas"]:
+			nuuid = idDiff["areas"][wid]
+			newId = idAssignment.AssignId("way", nuuid)
+			modTag = []
+			modTag.append(u'<way old_id="{0}" new_id="{1}"'.format(wid, newId))
+			newVer = 1
+			if newVer is not None:
+				modTag.append(u' new_version="{0}"'.format(newVer))
+			modTag.append(u'/>\n')
+			out.append("".join(modTag))
+
 		for nid in modObjs["nodes"]:
 			nodeInfo = modObjs["nodes"][nid]
 			out.append(u'<node old_id="{0}" new_id="{0}" new_version="{1}"/>\n'.format(nid, nodeInfo[3]+1))
@@ -985,7 +996,10 @@ class ApiChangesetUpload(object):
 
 		for wid in newObjs["ways"]:
 			memNds, tagDict = newObjs["ways"][wid]
-			nuuid = idDiff["ways"][wid]
+			if wid in idDiff["ways"]:
+				nuuid = idDiff["ways"][wid]
+			else:
+				nuuid = idDiff["areas"][wid]
 			newId = idAssignment.AssignId("way", nuuid)
 			wayDb[newId] = [memNds, nuuid]
 
