@@ -79,6 +79,11 @@ class IdAssignment(object):
 
 		return None
 
+def GetOsmIdForNonInts(idAssignment, objId, objType, subObject = None):
+	if not isinstance(objId, int):
+		return idAssignment.AssignId(objType, objId, subObject)
+	return objId	
+
 def ZiggToOsm(idAssignment, area):
 	osmData = {"node": {}, "way": {}, "relation": {}}
 	osmNodes = osmData["node"]
@@ -91,7 +96,7 @@ def ZiggToOsm(idAssignment, area):
 		shape = objShapes[0]
 		outer, inners = shape
 		pt = outer[0]
-		nid = idAssignment.AssignId("node", nodeId)
+		nid = GetOsmIdForNonInts(idAssignment, nodeId, "node")
 
 		osmNodes[nid] = (pt[:2], objData)
 
@@ -104,14 +109,14 @@ def ZiggToOsm(idAssignment, area):
 			outer, inners = shape
 			for pt in outer:
 				nodeId = pt[2]
-				nid = idAssignment.AssignId("node", nodeId)
+				nid = GetOsmIdForNonInts(idAssignment, nodeId, "node")
 				osmNodes[nid] = (pt[:2], {})
 
 			if inners is None: continue
 			for inner in inners:
 				for pt in inner:
 					nodeId = pt[2]
-					nid = idAssignment.AssignId("node", nodeId)
+					nid = GetOsmIdForNonInts(idAssignment, nodeId, "node")
 					osmNodes[nid] = (pt[:2], {})
 
 	#Write ways
@@ -119,11 +124,12 @@ def ZiggToOsm(idAssignment, area):
 		objShapes, objData = area["ways"][objId]
 		shape = objShapes[0]
 		outer, inners = shape
-		oid = idAssignment.AssignId("way", objId)
+		oid = GetOsmIdForNonInts(idAssignment, objId, "way")
 
 		nodeIds = []
 		for pt in outer:
-			nodeIds.append(idAssignment.AssignId("node", pt[2]))
+			nid = GetOsmIdForNonInts(idAssignment, pt[2], "node")
+			nodeIds.append(nid)
 
 		osmWays[oid] = (nodeIds, objData)
 
@@ -134,28 +140,28 @@ def ZiggToOsm(idAssignment, area):
 		outer, inners = shape
 		
 		#Write outer way
-		wayOuterId = idAssignment.AssignId("way", objId, "o")
+		wayOuterId = GetOsmIdForNonInts(idAssignment, objId, "way", "o")
 		nodeIds = []
 		for pt in outer:
-			nodeIds.append(idAssignment.AssignId("node", pt[2]))
+			nodeIds.append(GetOsmIdForNonInts(idAssignment, pt[2], "node"))
 		if len(outer) >= 2:
-			nodeIds.append(idAssignment.AssignId("node", outer[0][2])) #Close the area
+			nodeIds.append(GetOsmIdForNonInts(idAssignment, outer[0][2], "node")) #Close the area
 		osmWays[wayOuterId] = (nodeIds, objData)
 
 		#Writer inner ways
 		wayInnersIds = []
 		if inners is not None:
 			for i, inner in enumerate(inners):
-				oid = idAssignment.AssignId("way", objId, "i{0}".format(i))
+				oid = GetOsmIdForNonInts(idAssignment, objId, "way", "i{0}".format(i))
 				nodeIds = []
 				for pt in inner:
-					nodeIds.append(idAssignment.AssignId("node", pt[2]))
+					nodeIds.append(GetOsmIdForNonInts(idAssignment, pt[2], "node"))
 				if len(inner) >= 2:
-					nodeIds.append(idAssignment.AssignId("node", inner[0][2]))
+					nodeIds.append(GetOsmIdForNonInts(idAssignment, inner[0][2], "node"))
 				osmWays[oid] = (nodeIds, objData)
 				wayInnersIds.append(oid)
 
-		oid = idAssignment.AssignId("relation", objId)
+		oid = GetOsmIdForNonInts(idAssignment, objId, "relation")
 		relationMembers = [[wayOuterId, "outer", "way"]]
 		for wi in wayInnersIds:
 			relationMembers.append([wi, "inner", "way"])
@@ -222,6 +228,42 @@ def OsmToZigg(idAssignment, osmData):
 
 		ziggAreas[relUuid] = [[[outers[0], inners]], objDataCopy]
 		accounted["relation"].add(oid)
+
+	#Process closed ways (and other special cases) to areas
+	for oid in osmData["way"]:
+		if oid in accounted["way"]: continue
+		objMems, objData = osmData["way"][oid]
+		if len(objMems) < 2: continue
+		treatAsArea = False
+		if objMems[0] == objMems[-1]: treatAsArea = True
+		if "area" in objData:	
+			if objData["area"].lower() in ["yes", 1, "true"]: treatAsArea = True
+			if objData["area"].lower() in ["no", 0, "false"]: treatAsArea = False #Takes precidence
+		if not treatAsArea: continue
+
+		if oid > 0:
+			wayUuid = idAssignment.GetUuidFromId("way", oid)
+			if wayUuid is None: raise ValueError("Unknown way")
+		else:
+			wayUuid = oid
+		
+		wayShape = []
+		for pt in objMems[:-1]: #Omit last node because areas are assumed to do that anyway
+			try:
+				ptShape, ptData = osmData["node"][pt]
+			except KeyError:
+				raise RuntimeError("Node data missing from internal calculation")
+			if pt > 0:
+				ptUuid = idAssignment.GetUuidFromId("node", pt)
+				if ptUuid is None: raise ValueError("Unknown node")
+			else:
+				ptUuid = pt
+			wayShape.append([ptShape[0], ptShape[1], ptUuid])
+			if len(ptData) == 0:
+				accounted["node"].add(pt)
+
+		ziggAreas[wayUuid] = [[[wayShape, None]], objData]
+		accounted["way"].add(oid)
 
 	#Process remaining ways
 	for oid in osmData["way"]:
