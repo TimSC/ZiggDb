@@ -475,8 +475,12 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error closing changeset")
 
-	#Read back area containing data
+	#Read back single way object
 	bbox = [min(lon), min(lat), max(lon), max(lat)]
+	response = Get(conf.baseurl+"/0.6/way/{0}?bbox={1}&debug=1".format(wayId, ",".join(map(str, bbox))))
+	if save: open("add.html", "wt").write(response[0])
+
+	#Read back area containing data
 	response = Get(conf.baseurl+"/0.6/map?bbox={0}".format(",".join(map(str, bbox))))
 	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error reading back area")
