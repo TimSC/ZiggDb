@@ -13,16 +13,16 @@ from xml.sax.saxutils import escape
 import xml.etree.ElementTree as ET
 
 class IdAssignment(object):
-	def __init__(self):
-		self.lastIdsDb = web.ctx.lastIdsDb
-		self.nodeIdToUuidDb = web.ctx.nodeIdToUuidDb
-		self.uuidToNodeIdDb = web.ctx.uuidToNodeIdDb
+	def __init__(self, ctx):
+		self.lastIdsDb = ctx.lastIdsDb
+		self.nodeIdToUuidDb = ctx.nodeIdToUuidDb
+		self.uuidToNodeIdDb = ctx.uuidToNodeIdDb
 
-		self.wayIdToUuidDb = web.ctx.wayIdToUuidDb
-		self.uuidToWayIdDb = web.ctx.uuidToWayIdDb
+		self.wayIdToUuidDb = ctx.wayIdToUuidDb
+		self.uuidToWayIdDb = ctx.uuidToWayIdDb
 
-		self.relationIdToUuidDb = web.ctx.relationIdToUuidDb
-		self.uuidToRelationIdDb = web.ctx.uuidToRelationIdDb
+		self.relationIdToUuidDb = ctx.relationIdToUuidDb
+		self.uuidToRelationIdDb = ctx.uuidToRelationIdDb
 
 	def AssignId(self, objType, uuid = None, subObject = None):
 
@@ -280,7 +280,7 @@ class ApiMap(object):
 		ziggDb = web.ctx.ziggDb
 		nodePosDb = web.ctx.nodePosDb
 		wayDb = web.ctx.wayDb
-		idAssignment = IdAssignment()
+		idAssignment = IdAssignment(web.ctx)
 		writeOldPos = False
 		debug = 0
 		if "debug" in webInput:
@@ -360,7 +360,7 @@ class ApiGetObject(object):
 		ziggDb = web.ctx.ziggDb
 		nodePosDb = web.ctx.nodePosDb
 		wayDb = web.ctx.wayDb
-		idAssignment = IdAssignment()
+		idAssignment = IdAssignment(web.ctx)
 		writeOldPos = False
 		debug = 0
 		if "debug" in webInput:
@@ -388,7 +388,7 @@ class ApiVerifyCache(object):
 		ziggDb = web.ctx.ziggDb
 		nodePosDb = web.ctx.nodePosDb
 		wayDb = web.ctx.wayDb
-		idAssignment = IdAssignment()
+		idAssignment = IdAssignment(web.ctx)
 
 		bbox = map(float, webInput["bbox"].split(","))
 		area = ziggDb.GetArea(bbox)
@@ -435,7 +435,7 @@ class ApiVerifyDb(object):
 	def Render(self):
 		webInput = web.input()
 		ziggDb = web.ctx.ziggDb
-		idAssignment = IdAssignment()
+		idAssignment = IdAssignment(web.ctx)
 		bbox = map(float, webInput["bbox"].split(","))
 
 		return ziggDb.Verify(bbox)
@@ -495,7 +495,7 @@ class ApiChangesetCreate(object):
 		return self.Render()
 
 	def Render(self):
-		idAssignment = IdAssignment()
+		idAssignment = IdAssignment(web.ctx)
 		cid = idAssignment.AssignId("changeset")
 		webInput = web.input()
 		webData = web.data()
@@ -526,7 +526,7 @@ class ApiChangesets(object):
 		return self.Render()
 
 	def Render(self):
-		idAssignment = IdAssignment()
+		idAssignment = IdAssignment(web.ctx)
 		requestNum = idAssignment.AssignId("request")
 		curdir = os.path.dirname(__file__)
 		fi = open(os.path.join(curdir, "logs/{0}.txt".format(requestNum)), "wt")
@@ -556,7 +556,7 @@ class ApiChangeset(object):
 		return self.Render(cid)
 
 	def Render(self, cid):
-		idAssignment = IdAssignment()
+		idAssignment = IdAssignment(web.ctx)
 
 		requestNum = idAssignment.AssignId("request")
 		curdir = os.path.dirname(__file__)
@@ -582,7 +582,7 @@ class ApiChangesetUpload(object):
 		return self.Render(cid)
 
 	def Render(self, cid):
-		idAssignment = IdAssignment()
+		idAssignment = IdAssignment(web.ctx)
 		webData = web.data()
 		nodePosDb = web.ctx.nodePosDb
 		wayDb = web.ctx.wayDb
@@ -985,7 +985,7 @@ class ApiChangesetClose(object):
 		return self.Render(cid)
 
 	def Render(self, cid):
-		idAssignment = IdAssignment()
+		idAssignment = IdAssignment(web.ctx)
 
 		requestNum = idAssignment.AssignId("request")
 		curdir = os.path.dirname(__file__)
@@ -1038,7 +1038,7 @@ class ApiUserDetails(object):
 		out.append(u'  </user>\n')
 		out.append(u'</osm>\n')
 
-		idAssignment = IdAssignment()
+		idAssignment = IdAssignment(web.ctx)
 		requestNum = idAssignment.AssignId("request")
 		curdir = os.path.dirname(__file__)
 		fi = open(os.path.join(curdir, "logs/{0}.txt".format(requestNum)), "wt")
@@ -1080,22 +1080,23 @@ def RenderTemplate(template_name, **context):
 	#jinja_env.update_template_context(context)
 	return jinja_env.get_template(template_name).render(context)
 
+def OpenOsmDatabaseHandles(ctx):
+	ctx.nodeIdToUuidDb = SqliteDict(os.path.join(curdir, 'data', 'nodeIdToUuidDb.sqlite'), autocommit=True)
+	ctx.uuidToNodeIdDb = SqliteDict(os.path.join(curdir, 'data', 'uiidToNodeIdDb.sqlite'), autocommit=True)
+	ctx.nodePosDb = SqliteDict(os.path.join(curdir, 'data', 'nodePosDb.sqlite'), autocommit=True)
+	ctx.wayDb = SqliteDict(os.path.join(curdir, 'data', 'wayDb.sqlite'), autocommit=True)
+
+	ctx.wayIdToUuidDb = SqliteDict(os.path.join(curdir, 'data', 'wayIdToUuidDb.sqlite'), autocommit=True)
+	ctx.uuidToWayIdDb = SqliteDict(os.path.join(curdir, 'data', 'uiidToWayIdDb.sqlite'), autocommit=True)
+	ctx.relationIdToUuidDb = SqliteDict(os.path.join(curdir, 'data', 'relationIdToUuidDb.sqlite'), autocommit=True)
+	ctx.uuidToRelationIdDb = SqliteDict(os.path.join(curdir, 'data', 'uiidToRelationIdDb.sqlite'), autocommit=True)
+
+	ctx.lastIdsDb = SqliteDict(os.path.join(curdir, 'data', 'lastIdsDb.sqlite'), autocommit=True)
+
 def InitDatabaseConn():
 	curdir = os.path.dirname(__file__)
-	#web.ctx.dataDb = web.database(dbn='sqlite', db=os.path.join(curdir, 'data.db'))
 	
-	web.ctx.nodeIdToUuidDb = SqliteDict(os.path.join(curdir, 'data', 'nodeIdToUuidDb.sqlite'), autocommit=True)
-	web.ctx.uuidToNodeIdDb = SqliteDict(os.path.join(curdir, 'data', 'uiidToNodeIdDb.sqlite'), autocommit=True)
-	web.ctx.nodePosDb = SqliteDict(os.path.join(curdir, 'data', 'nodePosDb.sqlite'), autocommit=True)
-	web.ctx.wayDb = SqliteDict(os.path.join(curdir, 'data', 'wayDb.sqlite'), autocommit=True)
-
-	web.ctx.wayIdToUuidDb = SqliteDict(os.path.join(curdir, 'data', 'wayIdToUuidDb.sqlite'), autocommit=True)
-	web.ctx.uuidToWayIdDb = SqliteDict(os.path.join(curdir, 'data', 'uiidToWayIdDb.sqlite'), autocommit=True)
-
-	web.ctx.relationIdToUuidDb = SqliteDict(os.path.join(curdir, 'data', 'relationIdToUuidDb.sqlite'), autocommit=True)
-	web.ctx.uuidToRelationIdDb = SqliteDict(os.path.join(curdir, 'data', 'uiidToRelationIdDb.sqlite'), autocommit=True)
-
-	web.ctx.lastIdsDb = SqliteDict(os.path.join(curdir, 'data', 'lastIdsDb.sqlite'), autocommit=True)
+	OpenOsmDatabaseHandles(web.ctx)
 	web.ctx.ziggDb = zigg.ZiggDb(config.repos, curdir)
 	#web.ctx.session = session
 
