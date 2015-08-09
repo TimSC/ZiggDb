@@ -1137,6 +1137,12 @@ def RenderTemplate(template_name, **context):
 	return jinja_env.get_template(template_name).render(context)
 
 def OpenOsmDatabaseHandles(ctx):
+	dataFolder = os.path.join(curdir, 'data')
+	if not os.path.exists(dataFolder):
+		try:
+			os.makedirs(dataFolder)
+		except:
+			pass
 	ctx.nodeIdToUuidDb = SqliteDict(os.path.join(curdir, 'data', 'nodeIdToUuidDb.sqlite'), autocommit=True)
 	ctx.uuidToNodeIdDb = SqliteDict(os.path.join(curdir, 'data', 'uiidToNodeIdDb.sqlite'), autocommit=True)
 	ctx.nodePosDb = SqliteDict(os.path.join(curdir, 'data', 'nodePosDb.sqlite'), autocommit=True)

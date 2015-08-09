@@ -79,6 +79,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	"</osm>\n"
 
 	response = Put(conf.baseurl+"/0.6/changeset/create",createChangeset,userpass)
+	if save: open("open.html", "wt").write(response[0])
 	if verbose>=2: print response
 	cid = int(response[0])
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating changeset")
