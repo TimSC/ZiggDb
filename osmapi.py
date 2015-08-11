@@ -85,6 +85,7 @@ def GetOsmIdForNonInts(idAssignment, objId, objType, subObject = None):
 	return objId	
 
 def ZiggToOsm(idAssignment, area):
+
 	osmData = {"node": {}, "way": {}, "relation": {}}
 	osmNodes = osmData["node"]
 	osmWays = osmData["way"]
@@ -171,6 +172,18 @@ def ZiggToOsm(idAssignment, area):
 	return osmData
 
 def OsmToZigg(idAssignment, osmData):
+
+	#Conversion of areas between representations
+	#OSM representation	             Zigg representation   OSM representation
+	#
+	#Unclosed way -----------------> ways ---------------> unclosed way
+	#
+	#Closed ways ----> check tags -> ways ---------------> closed ways
+	#                    |                       |
+	#                    └---------> areas ------┘ (no inner polygons)
+	#
+	#Multipolygons ----------------> areas --------------> multipolygons
+
 	area = {"nodes": {}, "ways": {}, "areas": {}}
 	ziggAreas = area["areas"]
 	ziggWays = area["ways"]
