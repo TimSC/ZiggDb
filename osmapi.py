@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 #Recipe for apache: http://webpy.org/cookbook/mod_wsgi-apache
 #Jinja2 templating using solution 2 from: http://webpy.org/cookbook/template_jinja
 
