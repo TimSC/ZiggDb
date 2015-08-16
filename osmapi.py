@@ -172,6 +172,23 @@ def ZiggToOsm(idAssignment, area):
 
 	return osmData
 
+def CheckObjTreatAsArea():
+	treatAsArea = False
+	if objMems[0] == objMems[-1]: treatAsArea = True #Lowest precidence rule
+
+	for key in ["highway", "aerialway", "barrier", 
+			"boundary", "cycleway", "railway", 
+			"route", "waterway", "addr:"]:
+		if key in objData: treatAsArea = False
+	
+	for key in ["landuse"]:
+		if key in objData: treatAsArea = True
+
+	if "area" in objData:	
+		if objData["area"].lower() in ["yes", 1, "true"]: treatAsArea = True
+		if objData["area"].lower() in ["no", 0, "false"]: treatAsArea = False #Highest precidence rule
+	return treatAsArea
+
 def OsmToZigg(idAssignment, osmData):
 
 	#Conversion of areas between representations
@@ -248,11 +265,7 @@ def OsmToZigg(idAssignment, osmData):
 		if oid in accounted["way"]: continue
 		objMems, objData = osmData["way"][oid]
 		if len(objMems) < 2: continue
-		treatAsArea = False
-		if objMems[0] == objMems[-1]: treatAsArea = True
-		if "area" in objData:	
-			if objData["area"].lower() in ["yes", 1, "true"]: treatAsArea = True
-			if objData["area"].lower() in ["no", 0, "false"]: treatAsArea = False #Takes precidence
+		treatAsArea = CheckObjTreatAsArea(objMems, objData)
 		if not treatAsArea: continue
 
 		if oid > 0:
