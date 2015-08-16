@@ -483,7 +483,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 
 		#Read back single way object
 		bbox = [min(lon), min(lat), max(lon), max(lat)]
-		response = Get(conf.baseurl+"/0.6/way/{0}?bbox={1}&debug=1".format(wayId, ",".join(map(str, bbox))))
+		response = Get(conf.baseurl+"/0.6/way/{0}?bbox={1}".format(wayId, ",".join(map(str, bbox))))
 		if save: open("add.html", "wt").write(response[0])
 
 		#Read back area containing data
@@ -595,6 +595,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating area")
 
 	diff = InterpretUploadResponse(response[0])
+	print diff
 	wayId1 = int(diff["way"][-366]["new_id"])
 	wayId2 = int(diff["way"][-372]["new_id"])
 	wayId3 = int(diff["way"][-358]["new_id"])
