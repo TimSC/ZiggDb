@@ -135,44 +135,60 @@ def ZiggToOsm(idAssignment, area):
 
 		osmWays[oid] = (nodeIds, objData)
 
-	#Convert areas to relation of ways
+	#Convert areas to OSM shapes
 	for objId in area["areas"]:
 		objShapes, objData = area["areas"][objId]
 		shape = objShapes[0]
 		outer, inners = shape
+
+		#Areas without inner polygons are treated as areas
+		treatAsRelation = len(inners) > 0
 		
-		#Write outer way
-		wayOuterId = GetOsmIdForNonInts(idAssignment, objId, "way", "o")
-		nodeIds = []
-		for pt in outer:
-			nodeIds.append(GetOsmIdForNonInts(idAssignment, pt[2], "node"))
-		if len(outer) >= 2:
-			nodeIds.append(GetOsmIdForNonInts(idAssignment, outer[0][2], "node")) #Close the area
-		osmWays[wayOuterId] = (nodeIds, objData)
+		if treatAsRelation:
+			#Write outer way
+			wayOuterId = GetOsmIdForNonInts(idAssignment, objId, "way", "o")
+			nodeIds = []
+			for pt in outer:
+				nodeIds.append(GetOsmIdForNonInts(idAssignment, pt[2], "node"))
+			if len(outer) >= 2:
+				nodeIds.append(GetOsmIdForNonInts(idAssignment, outer[0][2], "node")) #Close the area
+			osmWays[wayOuterId] = (nodeIds, objData)
 
-		#Writer inner ways
-		wayInnersIds = []
-		if inners is not None:
-			for i, inner in enumerate(inners):
-				oid = GetOsmIdForNonInts(idAssignment, objId, "way", "i{0}".format(i))
-				nodeIds = []
-				for pt in inner:
-					nodeIds.append(GetOsmIdForNonInts(idAssignment, pt[2], "node"))
-				if len(inner) >= 2:
-					nodeIds.append(GetOsmIdForNonInts(idAssignment, inner[0][2], "node"))
-				osmWays[oid] = (nodeIds, objData)
-				wayInnersIds.append(oid)
+			#Writer inner ways
+			wayInnersIds = []
+			if inners is not None:
+				for i, inner in enumerate(inners):
+					oid = GetOsmIdForNonInts(idAssignment, objId, "way", "i{0}".format(i))
+					nodeIds = []
+					for pt in inner:
+						nodeIds.append(GetOsmIdForNonInts(idAssignment, pt[2], "node"))
+					if len(inner) >= 2: #Close the area
+						nodeIds.append(GetOsmIdForNonInts(idAssignment, inner[0][2], "node"))
+					osmWays[oid] = (nodeIds, objData)
+					wayInnersIds.append(oid)
 
-		oid = GetOsmIdForNonInts(idAssignment, objId, "relation")
-		relationMembers = [[wayOuterId, "outer", "way"]]
-		for wi in wayInnersIds:
-			relationMembers.append([wi, "inner", "way"])
-		objData["type"] = "multipolygon"
-		osmRelations[oid] = (relationMembers, objData)
+			oid = GetOsmIdForNonInts(idAssignment, objId, "relation")
+			relationMembers = [[wayOuterId, "outer", "way"]]
+			for wi in wayInnersIds:
+				relationMembers.append([wi, "inner", "way"])
+			objData["type"] = "multipolygon"
+			osmRelations[oid] = (relationMembers, objData)
+		else:
+			#Convert area to closed way
+			oid = GetOsmIdForNonInts(idAssignment, objId, "way")
 
+			nodeIds = []
+			for pt in outer:
+				nid = GetOsmIdForNonInts(idAssignment, pt[2], "node")
+				nodeIds.append(nid)
+			if len(outer) >= 2:
+				nodeIds.append(GetOsmIdForNonInts(idAssignment, outer[0][2], "node")) #Close the area
+
+			osmWays[oid] = (nodeIds, objData)
+			
 	return osmData
 
-def CheckObjTreatAsArea():
+def CheckObjTreatAsArea(objMems, objData):
 	treatAsArea = False
 	if objMems[0] == objMems[-1]: treatAsArea = True #Lowest precidence rule
 

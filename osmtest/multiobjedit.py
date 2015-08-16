@@ -496,9 +496,9 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if not CheckNodePosition(node3Readback, lat[2], lon[2]):
 		return (0,"Error node has bad position")
 	#Result is a relation of a different ID?
-	#wayReadback = data["way"][wayId]
-	#if not CheckWayHasChildNodes(wayReadback, [nodeId1, nodeId2, nodeId3]):
-	#	return (0,"Error way has incorrect child nodes")
+	wayReadback = data["way"][wayId]
+	if not CheckWayHasChildNodes(wayReadback, [nodeId1, nodeId2, nodeId3]):
+		return (0,"Error way has incorrect child nodes")
 
 	countNodes = 0
 	for el in data["way"][wayId]:
