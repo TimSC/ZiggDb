@@ -974,7 +974,6 @@ class ApiChangesetUpload(object):
 		out.append(u'<diffResult generator="ZiggDb" version="0.6">\n')
 
 		for nid in newObjs["nodes"]:
-			#TODO: it would be better to map IDs between representations explicitly?
 			nuuid = idDiff["nodes"][nid]
 			newId = idAssignment.AssignId("node", nuuid)
 			modTag = []
@@ -986,6 +985,7 @@ class ApiChangesetUpload(object):
 			out.append("".join(modTag))
 
 		for wid in newObjs["ways"]:
+			#TODO: it would be better to map IDs between representations explicitly?
 			if wid in idDiff["ways"]:
 				nuuid = idDiff["ways"][wid]
 			else:
@@ -999,7 +999,20 @@ class ApiChangesetUpload(object):
 			modTag.append(u'/>\n')
 			out.append("".join(modTag))
 
-		#TODO update relation members
+		for oid in newObjs["relations"]:
+			#TODO: it would be better to map IDs between representations explicitly?
+			if wid in idDiff["ways"]:
+				nuuid = idDiff["ways"][oid]
+			else:
+				nuuid = idDiff["areas"][oid]
+			newId = idAssignment.AssignId("relation", nuuid)
+			modTag = []
+			modTag.append(u'<relation old_id="{0}" new_id="{1}"'.format(oid, newId))
+			newVer = 1
+			if newVer is not None:
+				modTag.append(u' new_version="{0}"'.format(newVer))
+			modTag.append(u'/>\n')
+			out.append("".join(modTag))
 
 		for nid in modObjs["nodes"]:
 			nodeInfo = modObjs["nodes"][nid]
