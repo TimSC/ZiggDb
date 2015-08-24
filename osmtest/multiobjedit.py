@@ -125,6 +125,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	response = Get(conf.baseurl+"/0.6/map?bbox={0}".format(",".join(map(str, bbox))))
 	if verbose>=2: print response
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error reading back area")
+	if save: open("response.html", "wt").write(response[0])
 	data = InterpretDownloadedArea(response[0])
 	node1Readback = data["node"][nodeId1]
 	if not CheckNodePosition(node1Readback, lat[0], lon[0]):
@@ -586,7 +587,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	create += "  </relation>\n"+\
 	"</create>\n"+\
 	"</osmChange>\n"
-	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload",create,userpass)
+	response = Post(conf.baseurl+"/0.6/changeset/"+str(cid)+"/upload?debug=1",create,userpass)
 	if verbose>=2: print response
 	if save: open("add.html", "wt").write(response[0])
 	if log is not None: 
@@ -595,7 +596,7 @@ def TestMultiObjectEditing(userpass, verbose=0, save=False):
 	if HeaderResponseCode(response[1]) != "HTTP/1.1 200 OK": return (0,"Error creating area")
 
 	diff = InterpretUploadResponse(response[0])
-	print diff
+	print diff["relation"]
 	wayId1 = int(diff["way"][-366]["new_id"])
 	wayId2 = int(diff["way"][-372]["new_id"])
 	wayId3 = int(diff["way"][-358]["new_id"])

@@ -789,9 +789,9 @@ class ApiChangesetUpload(object):
 			fi.flush()
 
 		#Apply changes to OSM representation of active data
-		newObjs = {'nodes': {}, 'ways': {}}
-		modObjs = {'nodes': {}, 'ways': {}}
-		delObjs = {'nodes': set(), 'ways': set()}
+		newObjs = {'nodes': {}, 'ways': {}, 'relations': {}}
+		modObjs = {'nodes': {}, 'ways': {}, 'relations': {}}
+		delObjs = {'nodes': set(), 'ways': set(), 'relations': set()}
 
 		if logging:
 			fi.write(str(activeData)+"\n")
@@ -831,15 +831,39 @@ class ApiChangesetUpload(object):
 
 					newObjs["ways"][objId] = [memNds, tagDict]
 
+				#Find data that creates new relations
+				for el in meth:
+					if el.tag != "relation": continue
+					objId = int(el.attrib["id"])
+					if objId >= 0: continue
+
+					members = []
+					tagDict = {}
+					for ch in el:
+						if ch.tag == "tag":
+							tagDict[ch.attrib["k"]] = ch.attrib["v"]
+						if ch.tag == "member":
+							mty = ch.attrib["ref"]
+							mref = int(ch.attrib["ref"])
+							mrole = ch.attrib["role"]
+							members.append((mref, mrole, mty))
+
+					newObjs["relations"][objId] = [members, tagDict]
+
 				#Apply new nodes change to database
 				for nid in newObjs["nodes"]:
 					objLat, objLon, tagDict = newObjs["nodes"][nid]
 					osmData["node"][nid] = [(objLat, objLon, nid), tagDict]
-
+				
 				#Apply new way changes to database
 				for wid in newObjs["ways"]:
 					memNds, tagDict = newObjs["ways"][wid]
 					osmData["way"][wid] = [memNds, tagDict]
+
+				#Apply new relation changes to database
+				for oid in newObjs["relations"]:
+					members, tagDict = newObjs["relations"][oid]
+					osmData["relation"][oid] = [members, tagDict]
 
 			if method == "modify":
 				
@@ -990,11 +1014,15 @@ class ApiChangesetUpload(object):
 			wayInfo = modObjs["ways"][wid]
 			out.append(u'<way old_id="{0}" new_id="{0}" new_version="{1}"/>\n'.format(wid, wayInfo[2]+1))
 
+		#TODO update relation members
+
 		for nid in delObjs["nodes"]:
 			out.append(u'<node old_id="{0}"/>\n'.format(nid))
 
 		for wid in delObjs["ways"]:
 			out.append(u'<way old_id="{0}"/>\n'.format(wid))
+
+		#TODO update relation members
 
 		if logging:
 			fi.write("modObjs: {0}\n".format(modObjs))
@@ -1029,6 +1057,8 @@ class ApiChangesetUpload(object):
 					updatedMemNds.append(nid)
 			modObjs["ways"][wid][0] = updatedMemNds
 
+		#TODO update relation members
+
 		#Update object cache with created objects
 		newNodePosDict = {}
 		for nid in newObjs["nodes"]:
@@ -1046,6 +1076,12 @@ class ApiChangesetUpload(object):
 			newId = idAssignment.AssignId("way", nuuid)
 			wayDb[newId] = [memNds, nuuid]
 
+		for oid in newObjs["relations"]:
+			members, tagDict = newObjs["relations"][oid]
+			nuuid = idDiff["areas"][oid]
+			newId = idAssignment.AssignId("relation", nuuid)
+			relationDb[newId] = [members, nuuid]
+
 		#Update object cache with modified objects
 		for nid in modObjs["nodes"]:
 			objLat, objLon, tagDict, objVer = modObjs["nodes"][nid]
@@ -1057,12 +1093,16 @@ class ApiChangesetUpload(object):
 			wuuid = idAssignment.GetUuidFromId("way", wid)
 			wayDb[wid] = [memNds, wuuid]
 
+		#TODO process relations
+
 		#Delete obj in cache when necessary
 		for nid in delObjs["nodes"]:
 			del nodePosDb[nid]
 
 		for wid in delObjs["ways"]:
 			del wayDb[wid]
+
+		#TODO process relations
 
 		if logging:
 			fi.write("response:\n")
@@ -1190,6 +1230,7 @@ def OpenOsmDatabaseHandles(ctx):
 	ctx.uuidToNodeIdDb = SqliteDict(os.path.join(curdir, 'data', 'uiidToNodeIdDb.sqlite'), autocommit=True)
 	ctx.nodePosDb = SqliteDict(os.path.join(curdir, 'data', 'nodePosDb.sqlite'), autocommit=True)
 	ctx.wayDb = SqliteDict(os.path.join(curdir, 'data', 'wayDb.sqlite'), autocommit=True)
+	ctx.relationDb = SqliteDict(os.path.join(curdir, 'data', 'relationDb.sqlite'), autocommit=True)
 
 	ctx.wayIdToUuidDb = SqliteDict(os.path.join(curdir, 'data', 'wayIdToUuidDb.sqlite'), autocommit=True)
 	ctx.uuidToWayIdDb = SqliteDict(os.path.join(curdir, 'data', 'uiidToWayIdDb.sqlite'), autocommit=True)
