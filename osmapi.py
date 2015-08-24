@@ -972,9 +972,10 @@ class ApiChangesetUpload(object):
 		out = []
 		out.append(u'<?xml version="1.0" encoding="UTF-8"?>\n')
 		out.append(u'<diffResult generator="ZiggDb" version="0.6">\n')
-		for nid in idDiff["nodes"]:
+
+		for nid in newObjs["nodes"]:
+			#TODO: it would be better to map IDs between representations explicitly?
 			nuuid = idDiff["nodes"][nid]
-			#oldOld, newNew
 			newId = idAssignment.AssignId("node", nuuid)
 			modTag = []
 			modTag.append(u'<node old_id="{0}" new_id="{1}"'.format(nid, newId))
@@ -984,8 +985,11 @@ class ApiChangesetUpload(object):
 			modTag.append(u'/>\n')
 			out.append("".join(modTag))
 
-		for wid in idDiff["ways"]:
-			nuuid = idDiff["ways"][wid]
+		for wid in newObjs["ways"]:
+			if wid in idDiff["ways"]:
+				nuuid = idDiff["ways"][wid]
+			else:
+				nuuid = idDiff["areas"][wid]
 			newId = idAssignment.AssignId("way", nuuid)
 			modTag = []
 			modTag.append(u'<way old_id="{0}" new_id="{1}"'.format(wid, newId))
@@ -995,16 +999,7 @@ class ApiChangesetUpload(object):
 			modTag.append(u'/>\n')
 			out.append("".join(modTag))
 
-		for wid in idDiff["areas"]:
-			nuuid = idDiff["areas"][wid]
-			newId = idAssignment.AssignId("way", nuuid)
-			modTag = []
-			modTag.append(u'<way old_id="{0}" new_id="{1}"'.format(wid, newId))
-			newVer = 1
-			if newVer is not None:
-				modTag.append(u' new_version="{0}"'.format(newVer))
-			modTag.append(u'/>\n')
-			out.append("".join(modTag))
+		#TODO update relation members
 
 		for nid in modObjs["nodes"]:
 			nodeInfo = modObjs["nodes"][nid]
