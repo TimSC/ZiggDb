@@ -223,6 +223,7 @@ def OsmToZigg(idAssignment, osmData):
 	ziggWays = area["ways"]
 	ziggNodes = area["nodes"]
 	accounted = {"node": set(), "way": set(), "relation": set()}
+	idMapping = {"node": {}, "way": {}, "relation": {}}
 
 	#Relations to areas
 	for oid in osmData["relation"]:
@@ -244,6 +245,12 @@ def OsmToZigg(idAssignment, osmData):
 				wayMems, wayData = osmData["way"][memId]
 			except KeyError:
 				raise RuntimeError("Way data missing from internal calculation")
+
+			if memRole == "inner":
+				wayIndex = ("subobject-way", relUuid, "inner", len(inners))
+			if memRole == "outer":
+				wayIndex = ("subobject-way", relUuid, "outer", len(outers))
+
 			wayShape = []
 			for pt in wayMems:
 				try:
@@ -256,15 +263,18 @@ def OsmToZigg(idAssignment, osmData):
 				else:
 					ptUuid = pt
 				wayShape.append([ptShape[0], ptShape[1], ptUuid])
+				#Unless the node has no tags, don't bother having a separate node in database
 				if len(ptData) == 0:
 					accounted["node"].add(pt)
+					idMapping["node"][pt] = ("node", ptUuid)
 				
 			if memRole == "inner":
 				inners.append(wayShape)
 			if memRole == "outer":
 				outers.append(wayShape)
 			accounted["way"].add(memId)
-	
+			idMapping["way"][memId] = wayIndex
+
 		if len(outers) > 1:
 			raise ValueError("Multiple outer ways not implemented")
 		if len(outers) == 0:
@@ -275,6 +285,7 @@ def OsmToZigg(idAssignment, osmData):
 
 		ziggAreas[relUuid] = [[[outers[0], inners]], objDataCopy]
 		accounted["relation"].add(oid)
+		idMapping["relation"][oid] = ("relation", relUuid)
 
 	#Process closed ways (and other special cases) to areas
 	for oid in osmData["way"]:
@@ -302,11 +313,14 @@ def OsmToZigg(idAssignment, osmData):
 			else:
 				ptUuid = pt
 			wayShape.append([ptShape[0], ptShape[1], ptUuid])
+			#Unless the node has no tags, don't bother having a separate node in database
 			if len(ptData) == 0:
 				accounted["node"].add(pt)
+				idMapping["node"][pt] = ("node", ptUuid)
 
 		ziggAreas[wayUuid] = [[[wayShape, []]], objData]
 		accounted["way"].add(oid)
+		idMapping["way"][oid] = ("way", wayUuid)
 
 	#Process remaining ways
 	for oid in osmData["way"]:
@@ -330,11 +344,14 @@ def OsmToZigg(idAssignment, osmData):
 			else:
 				ptUuid = pt
 			wayShape.append([ptShape[0], ptShape[1], ptUuid])
+			#Unless the node has no tags, don't bother having a separate node in database
 			if len(ptData) == 0:
 				accounted["node"].add(pt)
+				idMapping["node"][pt] = ("node", ptUuid)
 
 		ziggWays[wayUuid] = [[[wayShape, None]], objData]
 		accounted["way"].add(oid)
+		idMapping["way"][oid] = ("way", wayUuid)
 
 	#Process remaining nodes
 	for oid in osmData["node"]:
@@ -348,8 +365,9 @@ def OsmToZigg(idAssignment, osmData):
 
 		ziggNodes[nodeUuid] = [[[[[pt[0], pt[1], nodeUuid]], None]], objData]
 		accounted["node"].add(oid)
+		idMapping["node"][oid] = ("node", nodeUuid)
 
-	return area
+	return area, idMapping
 
 class ApiMap(object):
 	def GET(self):
@@ -658,6 +676,22 @@ class ApiChangeset(object):
 		web.header('Content-Type', 'text/xml')
 		return "bonk"
 
+def FindIdInDiff(ziggObjId, idDiff):
+	oid = None
+	if ziggObjId[0] == "node":
+		oid = idDiff["nodes"][ziggObjId[1]]
+	if ziggObjId[0] == "way":
+		oid = idDiff["ways"][ziggObjId[1]]
+	if ziggObjId[0] == "area":
+		oid = idDiff["areas"][ziggObjId[1]]
+	if ziggObjId[0] == "area":
+		oid = idDiff["areas"][ziggObjId[1]]
+	if ziggObjId[0] == "subobject-way"
+		relUuid, "outer", len(outers)
+		oid = idDiff["areas"][ziggObjId[1]] = relUuid
+
+	newId = idAssignment.AssignId(ziggObjId[0], oid)
+
 class ApiChangesetUpload(object):
 
 	def GET(self, cid):
@@ -955,7 +989,7 @@ class ApiChangesetUpload(object):
 					del osmData["way"][wid]
 
 		#Convert OSM representation to zigg based format
-		updatedArea = OsmToZigg(idAssignment, osmData)
+		updatedArea, idMapping = OsmToZigg(idAssignment, osmData)
 
 		if logging:
 			fi.write(str(updatedArea)+"\n")
@@ -974,8 +1008,9 @@ class ApiChangesetUpload(object):
 		out.append(u'<diffResult generator="ZiggDb" version="0.6">\n')
 
 		for nid in newObjs["nodes"]:
-			nuuid = idDiff["nodes"][nid]
-			newId = idAssignment.AssignId("node", nuuid)
+			ziggObjId = idMapping["node"][nid]
+			newId = FindIdInDiff(ziggObjId, idDiff)
+
 			modTag = []
 			modTag.append(u'<node old_id="{0}" new_id="{1}"'.format(nid, newId))
 			newVer = 1
