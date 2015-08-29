@@ -332,15 +332,15 @@ class ZiggRepo(object):
 				ziggArea = {}
 				ziggArea["nodes"] = {}
 				nodeId = uuid.uuid4().bytes
-				ziggArea["nodes"][nodeId] = [[[[[Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), nodeId]],None]],
+				ziggArea["nodes"][nodeId] = [[[None, [[Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), nodeId]],None]],
 					{"name": "special place"}]
 				ziggArea["ways"] = {}
-				ziggArea["ways"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .2), Interp(tl[1], br[1], .2), uuid.uuid4().bytes], 
+				ziggArea["ways"][uuid.uuid4().bytes] = [[[None, [[Interp(tl[0], br[0], .2), Interp(tl[1], br[1], .2), uuid.uuid4().bytes], 
 					[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .5), commonNode], 
 					[Interp(tl[0], br[0], .3), Interp(tl[1], br[1], .23), uuid.uuid4().bytes]], None]],
 					{"name": "path"}]
 				ziggArea["areas"] = {}
-				ziggArea["areas"][uuid.uuid4().bytes] = [[[[[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .4), uuid.uuid4().bytes], 
+				ziggArea["areas"][uuid.uuid4().bytes] = [[[None, [[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .4), uuid.uuid4().bytes], 
 					[Interp(tl[0], br[0], .4), Interp(tl[1], br[1], .5), commonNode], 
 					[Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .5), uuid.uuid4().bytes], 
 					[Interp(tl[0], br[0], .5), Interp(tl[1], br[1], .4), uuid.uuid4().bytes]], []]],

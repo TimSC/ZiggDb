@@ -31,6 +31,8 @@ if __name__ == "__main__":
 
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 
+	exit(0)
+
 	#==Node operations==
 	#Basic concept: nodes may only be changed inside the active area
 
