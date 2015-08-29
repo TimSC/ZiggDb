@@ -258,7 +258,7 @@ if __name__ == "__main__":
 
 	#Upload two nodes with the same negative id (not allowed)
 	#This is actually impossible because a dict can only have one value per key
-	exit(0)
+
 	#==Way operations==
 	#Basic concept: The shapes of ways outside the active area is constant.
 	#Rationale: Shape many be moved into a different data tile; that would be complicated
@@ -266,7 +266,7 @@ if __name__ == "__main__":
 	#Create way full within active area (allowed)
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 	userInfo = {}
-	newWay = [[[[[51.128, -0.271, -1], [51.127, -0.269, -2]], None]], {'name': 'old road'}]
+	newWay = [[[None, [[51.128, -0.271, -1], [51.127, -0.269, -2]], None]], {'name': 'old road'}]
 	area["ways"][-1] = newWay
 	idChanges = ziggDb.SetArea(area, userInfo)
 	zigg.ApplyIdChanges(area, idChanges)
@@ -356,7 +356,7 @@ if __name__ == "__main__":
 	#Create way partly or fully outside active area (not allowed)
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 	userInfo = {}
-	newWay = [[[[[61.128, -0.271, -1], [61.127, -0.269, -2]], None]], {'name': 'far away road'}]
+	newWay = [[[None, [[61.128, -0.271, -1], [61.127, -0.269, -2]], None]], {'name': 'far away road'}]
 	area["ways"][-1] = newWay
 	ex = False
 	try:
@@ -377,7 +377,7 @@ if __name__ == "__main__":
 	pt1 = (zigg.Interp(tl[0], br[0], 0.5), zigg.Interp(tl[1], br[1], 0.25))
 	pt2 = (zigg.Interp(tl[0], br[0], 0.5), zigg.Interp(tl[1], br[1], 0.75))
 
-	area["ways"][-1] = [[[[[pt1[0], pt1[1], -1], [pt2[0], pt2[1], -2]], None]], {'name': 'spanning road'}]
+	area["ways"][-1] = [[[None, [[pt1[0], pt1[1], -1], [pt2[0], pt2[1], -2]], None]], {'name': 'spanning road'}]
 	idChanges = ziggDb.SetArea(area, userInfo)
 	newWayId = idChanges["ways"].values()[0]
 	ok = True
@@ -427,7 +427,7 @@ if __name__ == "__main__":
 	objShape = objShapes[0]
 	outer, inners = objShape
 
-	area["ways"][newWayId] = [[[[[pt2[0], pt2[1], outer[0][2]], [pt3[0], pt3[1], outer[1][2]]], None]], 
+	area["ways"][newWayId] = [[[None, [[pt2[0], pt2[1], outer[0][2]], [pt3[0], pt3[1], outer[1][2]]], None]], 
 		{'name': 'spanning road'}]
 
 	idChanges = ziggDb.SetArea(area, userInfo)
@@ -552,7 +552,7 @@ if __name__ == "__main__":
 	#Upload new objects with contraditory positions for a shared UUID node (allowed, silently fixed)
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 	userInfo = {}
-	newWay = [[[[[51.128, -0.271, -1], [51.127, -0.269, -1]], None]], {'name': 'condtradictory positions'}]
+	newWay = [[[None, [[51.128, -0.271, -1], [51.127, -0.269, -1]], None]], {'name': 'condtradictory positions'}]
 	area["ways"][-1] = newWay
 	idChanges = ziggDb.SetArea(area, userInfo, -1)
 	zigg.ApplyIdChanges(area, idChanges)
@@ -568,7 +568,7 @@ if __name__ == "__main__":
 		print "Points with IDs should have the same position"
 	else:
 		testPass += 1
-
+	exit(0)
 	#==Area operations==
 	#Basic concept: The shapes of areas outside the active area is constant.
 	#Rationale: Shape many be moved into a different data tile; that would be complicated
@@ -576,7 +576,7 @@ if __name__ == "__main__":
 	#Create an area in active area
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 	userInfo = {}
-	newArea = [[[[[51.128, -0.271, -1], [51.127, -0.269, -2], [51.1275, -0.272, -3]], []]], {'name': 'lake'}]
+	newArea = [[[None, [[51.128, -0.271, -1], [51.127, -0.269, -2], [51.1275, -0.272, -3]], []]], {'name': 'lake'}]
 	area["areas"][-1] = newArea
 	idChanges = ziggDb.SetArea(area, userInfo)
 	zigg.ApplyIdChanges(area, idChanges)
@@ -598,7 +598,7 @@ if __name__ == "__main__":
 	area = area2
 
 	#Modify tag for an area in active area
-	newArea = [[[[[51.128, -0.271, -1], [51.127, -0.269, -2], [51.1275, -0.272, -3]], []]], {'name': 'wood'}]
+	newArea = [[[None, [[51.128, -0.271, -1], [51.127, -0.269, -2], [51.1275, -0.272, -3]], []]], {'name': 'wood'}]
 	area["areas"][areaId] = newArea
 	idChanges = ziggDb.SetArea(area, userInfo)
 
