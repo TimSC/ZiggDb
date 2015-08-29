@@ -75,10 +75,8 @@ if __name__ == "__main__":
 
 	area = area2
 
-	exit(0)
-
 	#Move point within active area (allowed)
-	area["nodes"][nodeId] = [[[[[51.129, -0.272, nodeId]], None]], {'name': 'another place'}]
+	area["nodes"][nodeId] = [[[None, [[51.129, -0.272, nodeId]], None]], {'name': 'another place'}]
 	idChanges = ziggDb.SetArea(area, userInfo)
 	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 	diffs = zigg.CompareAreas(area, area2)
@@ -91,7 +89,7 @@ if __name__ == "__main__":
 	area = area2
 
 	#Change node tags within active area (allowed)
-	area["nodes"][nodeId] = [[[[[51.129, -0.272, nodeId]], None]], {'name': 'test tag'}]
+	area["nodes"][nodeId] = [[[None, [[51.129, -0.272, nodeId]], None]], {'name': 'test tag'}]
 
 	idChanges = ziggDb.SetArea(area, userInfo)
 	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
@@ -106,7 +104,7 @@ if __name__ == "__main__":
 
 	#Add point outside active area (not allowed)
 	userInfo = {}
-	newNode = [[[[[51.11, -0.272, -1]], None]], {'name': 'far away place'}]
+	newNode = [[[None, [[51.11, -0.272, -1]], None]], {'name': 'far away place'}]
 	area["nodes"][-1] = newNode
 	ex = False
 	try:
@@ -120,7 +118,7 @@ if __name__ == "__main__":
 		testPass += 1
 
 	#Move point in, from or into outside active area (not allowed)
-	area["nodes"][nodeId] = [[[[[51.11, -0.272, None]], None]], {'name': 'another place'}]
+	area["nodes"][nodeId] = [[[None, [[51.11, -0.272, None]], None]], {'name': 'another place'}]
 	ex = False
 	try:
 		idChanges = ziggDb.SetArea(area, userInfo)
@@ -137,7 +135,7 @@ if __name__ == "__main__":
 
 	#Create a point with a client specified UUID (not allowed)
 	userInfo = {}
-	newNode = [[[[[51.129, -0.272, None]], None]], {'name': 'another place'}]
+	newNode = [[[None, [[51.129, -0.272, None]], None]], {'name': 'another place'}]
 	area["nodes"][uuid.uuid4().bytes] = newNode
 	ex = False
 	try:
@@ -151,7 +149,7 @@ if __name__ == "__main__":
 		testPass += 1
 
 	#Upload node with non-matching UUIDs (not allowed)
-	newNode = [[[[[51.129, -0.272, -2]], None]], {'name': 'another place'}]
+	newNode = [[[None, [[51.129, -0.272, -2]], None]], {'name': 'another place'}]
 	area["nodes"][-1] = newNode
 	ex = False
 	try:
@@ -176,7 +174,7 @@ if __name__ == "__main__":
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 	nodeId1 = area["nodes"].keys()[0]
 	nodeId2 = area["nodes"].keys()[1]
-	area["nodes"][nodeId1] = [[[[[51.129, -0.272, nodeId2]], None]], {'name': 'another place'}]
+	area["nodes"][nodeId1] = [[[None, [[51.129, -0.272, nodeId2]], None]], {'name': 'another place'}]
 	ex = False
 	try:
 		idChanges = ziggDb.SetArea(area, userInfo)
@@ -203,7 +201,7 @@ if __name__ == "__main__":
 	area = area2
 
 	#Uploading node with multiple locations (not allowed)
-	newNode = [[[[[51.129, -0.272, -1], [51.1291, -0.2721, -1]], None]], {'name': 'another place'}]
+	newNode = [[[None, [[51.129, -0.272, -1], [51.1291, -0.2721, -1]], None]], {'name': 'another place'}]
 	area["nodes"][-1] = newNode
 	ex = False
 	try:
@@ -217,7 +215,7 @@ if __name__ == "__main__":
 		testPass += 1
 
 	#Upload node with inner polygon (not allowed)
-	newNode = [[[[[51.129, -0.272, -1]], []]], {'name': 'another place'}]
+	newNode = [[[None, [[51.129, -0.272, -1]], []]], {'name': 'another place'}]
 	area["nodes"][-1] = newNode
 	ex = False
 	try:
@@ -231,7 +229,7 @@ if __name__ == "__main__":
 		testPass += 1
 
 	#Upload node with invalid lat/lon (not allowed)
-	newNode = [[[[[-90.1, -0.272, -1]], None]], {'name': 'another place'}]
+	newNode = [[[None, [[-90.1, -0.272, -1]], None]], {'name': 'another place'}]
 	area["nodes"][-1] = newNode
 	ex = False
 	try:
@@ -245,7 +243,7 @@ if __name__ == "__main__":
 		testPass += 1
 
 	#Upload a node with invalid tag info (not allowed)
-	newNode = [[[[[51.129, -0.272, -1]], None]], ['name', 'another place']]
+	newNode = [[[None, [[51.129, -0.272, -1]], None]], ['name', 'another place']]
 	area["nodes"][-1] = newNode
 	ex = False
 	try:
@@ -260,7 +258,7 @@ if __name__ == "__main__":
 
 	#Upload two nodes with the same negative id (not allowed)
 	#This is actually impossible because a dict can only have one value per key
-
+	exit(0)
 	#==Way operations==
 	#Basic concept: The shapes of ways outside the active area is constant.
 	#Rationale: Shape many be moved into a different data tile; that would be complicated
