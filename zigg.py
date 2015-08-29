@@ -55,12 +55,11 @@ def FindPartlyOutside(objsDict, bbox, verbose = 0):
 	out = {}
 	for objId in objsDict:
 		objData = objsDict[objId]
-		shapes = objData[0]
-		tags = objData[1]
+		shapes, tags = objData
 		foundOutside = False
 		foundInside = False
 		for shape in shapes:
-			outer, inners = shape
+			outerId, outer, inners = shape
 		
 			for pt in outer:
 				if not CheckPointInRect(pt, bbox):
@@ -90,11 +89,10 @@ def FindInsideOrPartlyInside(objsDict, bbox, verbose = 0):
 	out = {}
 	for objId in objsDict:
 		objData = objsDict[objId]
-		shapes = objData[0]
-		tags = objData[1]
+		shapes, tags = objData
 		foundInside = False
 		for shape in shapes:
-			outer, inners = shape
+			outerId, outer, inners = shape
 		
 			for pt in outer:
 				if not CheckPointInRect(pt, bbox):
@@ -124,12 +122,11 @@ def FindEntirelyInside(objsDict, bbox):
 	out = {}
 	for objId in objsDict:
 		objData = objsDict[objId]
-		shapes = objData[0]
-		tags = objData[1]
+		shapes, tags = objData
 		foundOutside = False
 		foundInside = False
 		for shape in shapes:
-			outer, inners = shape
+			outerId, outer, inners = shape
 		
 			for pt in outer:
 				if not CheckPointInRect(pt, bbox):
@@ -159,11 +156,10 @@ def FindEntirelyOutside(objsDict, bbox, verbose = 0):
 	out = {}
 	for objId in objsDict:
 		objData = objsDict[objId]
-		shapes = objData[0]
-		tags = objData[1]
+		shapes, tags = objData
 		foundInside = False
 		for shape in shapes:
-			outer, inners = shape
+			outerId, outer, inners = shape
 		
 			for pt in outer:
 				if CheckPointInRect(pt, bbox):
@@ -187,11 +183,10 @@ def Trim(objsDict, bbox, invert = False):
 	out = {}
 	for objId in objsDict:
 		objData = objsDict[objId]
-		shapes = objData[0]
-		tags = objData[1]
+		shapes, tags = objData
 		found = False
 		for shape in shapes:
-			outer, inners = shape
+			outerId, outer, inners = shape
 			
 			for pt in outer:
 				if CheckPointInRect(pt, bbox):
@@ -264,7 +259,7 @@ def ApplyIdChanges(area, idChanges):
 			#Update member UUIDs
 			shapes, tags = objData
 			for shape in shapes:
-				outer, inners = shape
+				outerId, outer, inners = shape
 				for pt in outer:
 					ptId = pt[2]
 					if not isinstance(ptId, int):
@@ -284,7 +279,7 @@ def ObjectExpectedInTiles(objData, zo):
 	tags = objData[1]
 	tileXYSet = set()
 	for shape in shapes:
-		outer, inners = shape
+		outerId, outer, inners = shape
 		
 		for pt in outer:
 			x, y = slippy.deg2num(pt[0], pt[1], zo)
@@ -332,7 +327,7 @@ class ZiggRepo(object):
 				ziggArea = {}
 				ziggArea["nodes"] = {}
 				nodeId = uuid.uuid4().bytes
-				ziggArea["nodes"][nodeId] = [[[None, [[Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), nodeId]],None]],
+				ziggArea["nodes"][nodeId] = [[[None, [[Interp(tl[0], br[0], .1), Interp(tl[1], br[1], .1), nodeId]], None]],
 					{"name": "special place"}]
 				ziggArea["ways"] = {}
 				ziggArea["ways"][uuid.uuid4().bytes] = [[[None, [[Interp(tl[0], br[0], .2), Interp(tl[1], br[1], .2), uuid.uuid4().bytes], 
@@ -408,7 +403,7 @@ class ZiggRepo(object):
 				objData = objDict[objId]
 				objShapes, objTags = objData
 				for shape in objShapes:
-					outer, inners = shape
+					outerId, outer, inners = shape
 					pts.extend(outer)
 					if inners is None: continue
 					for inner in inners:
@@ -670,7 +665,7 @@ class ZiggDb(object):
 			#Update member UUIDs
 			shapes, tags = objData
 			for shape in shapes:
-				outer, inners = shape
+				outerId, outer, inners = shape
 				for pt in outer:
 					ptId = pt[2]
 					if not isinstance(ptId, int):
@@ -704,7 +699,7 @@ class ZiggDb(object):
 
 			shapes, tags = objData
 			for shape in shapes:
-				outer, inners = shape
+				outerId, outer, inners = shape
 				for pt in outer:
 					ptId = pt[2]
 					if isinstance(ptId, int):
@@ -717,7 +712,7 @@ class ZiggDb(object):
 
 			shapes, tags = objData
 			for shape in shapes:
-				outer, inners = shape
+				outerId, outer, inners = shape
 				for pt in outer:
 					ptId = pt[2]
 					if isinstance(ptId, int):
@@ -791,7 +786,7 @@ class ZiggDb(object):
 
 			shapeData, tagData = objData
 			for shape in shapeData:
-				outer, inner = shape
+				outerId, outer, inner = shape
 				outerOut = []
 				innerOut = None
 
@@ -811,7 +806,7 @@ class ZiggDb(object):
 								self._ValidateUuid(pt[2])])
 						innerOut.append(outInnerPoly)
 				
-				outShapeData.append([outerOut, innerOut])
+				outShapeData.append([outerId, outerOut, innerOut])
 				try:
 					tagKeys = tagData.keys()
 				except AttributeError:
@@ -868,7 +863,7 @@ class ZiggDb(object):
 			if len(shapeData) != 1:
 				raise ValueError("Nodes with only one position supported")
 			shape1 = shapeData[0]
-			outer1, inner1 = shape1
+			outerId1, outer1, inner1 = shape1
 			if inner1 is not None:
 				raise ValueError("Inner shape for a node should be none")
 			if len(outer1) != 1:
@@ -887,7 +882,7 @@ class ZiggDb(object):
 			if len(shapeData) != 1:
 				raise ValueError("Ways with only one line is supported")
 
-			outer, inner = shapeData[0]
+			outerId, outer, inner = shapeData[0]
 			if inner is not None:
 				raise ValueError("Ways cannot have inner area")
 
@@ -899,7 +894,7 @@ class ZiggDb(object):
 			if len(shapeData) != 1:
 				raise ValueError("Area with only one outer poly is supported")
 
-			outer, inner = shapeData[0]
+			outerId, outer, inner = shapeData[0]
 			if inner is None:
 				raise ValueError("Areas must have list of inner polys (even if it is empty)")
 
@@ -917,7 +912,7 @@ class ZiggDb(object):
 				objData = objDict[objId]
 				objShapes, objTags = objData
 				for shape in objShapes:
-					outer, inners = shape
+					outerId, outer, inners = shape
 					for pt in outer:
 
 						if not CheckPointInRect(pt, bbox):
@@ -941,7 +936,7 @@ class ZiggDb(object):
 				objData = objDict[objId]
 				objShapes, objTags = objData
 				for shape in objShapes:
-					outer, inners = shape
+					outerId, outer, inners = shape
 					for pt in outer:
 						if CheckPointInRect(pt, bbox):
 							if pt[2] not in nodePosInsideDict:
@@ -964,7 +959,7 @@ class ZiggDb(object):
 				objShapes, objTags = objData
 				for shape in objShapes:
 
-					outer, inners = shape
+					outerId, outer, inners = shape
 					for i, pt in enumerate(outer):
 						if pt[2] in nodePosOutsideDict:
 							outer[i] = nodePosOutsideDict[pt[2]]
@@ -1008,7 +1003,7 @@ class ZiggDb(object):
 				outside = False
 				shapeData, tagData = objData
 				for shape in shapeData:
-					outer, inners = shape
+					outerId, outer, inners = shape
 					for pt in outer:
 						ptId = pt[2]
 						if not isinstance(ptId, int): continue
@@ -1045,8 +1040,8 @@ class ZiggDb(object):
 				newShapeData, newTagData = objDataNew
 				for existingShape, newShape in zip(existingShapeData, newShapeData):
 
-					outer, inners = existingShape
-					newOuter, newInners = newShape
+					outerId, outer, inners = existingShape
+					newOuterId, newOuter, newInners = newShape
 
 					#Check the nodes we expect in outer way
 					outerIds = set()
@@ -1079,7 +1074,7 @@ class ZiggDb(object):
 			objData = newArea["ways"][objId]
 			shapeData, tagData = objData
 			for shape in shapeData:
-				outer, inners = shape
+				outerId, outer, inners = shape
 				if len(outer) < 1:
 					raise ValueError("Way must have at least one node")
 
@@ -1088,7 +1083,7 @@ class ZiggDb(object):
 			objData = newArea["areas"][objId]
 			shapeData, tagData = objData
 			for shape in shapeData:
-				outer, inners = shape
+				outerId, outer, inners = shape
 				if len(outer) < 1:
 					raise ValueError("Areas must have at least one node in outer way")
 				for inner in inners:

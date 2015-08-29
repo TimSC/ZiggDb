@@ -31,14 +31,14 @@ if __name__ == "__main__":
 
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 
-	exit(0)
+	
 
 	#==Node operations==
 	#Basic concept: nodes may only be changed inside the active area
 
 	#Add point within active area (allowed)
 	userInfo = {}
-	newNode = [[[[[51.129, -0.272, -1]], None]], {'name': 'another place'}]
+	newNode = [[[None, [[51.129, -0.272, -1]], None]], {'name': 'another place'}]
 	area["nodes"][-1] = newNode
 	#print area["nodes"]
 	idChanges = ziggDb.SetArea(area, userInfo)
@@ -63,7 +63,7 @@ if __name__ == "__main__":
 		testPass += 1	
 
 	#Check node ID has been updated
-	nodeId2 = nodeData[0][0][0][0][2]
+	nodeId2 = nodeData[0][0][1][0][2]
 	if nodeId != nodeId2:
 		print "Incorrect node ID in data when adding node"
 		ok = False
@@ -74,6 +74,8 @@ if __name__ == "__main__":
 		testFail += 1
 
 	area = area2
+
+	exit(0)
 
 	#Move point within active area (allowed)
 	area["nodes"][nodeId] = [[[[[51.129, -0.272, nodeId]], None]], {'name': 'another place'}]
