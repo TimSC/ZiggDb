@@ -287,7 +287,7 @@ if __name__ == "__main__":
 	wayShape, wayTags = wayData
 	newWayNodeIds = []
 	if len(wayShape) == 1:
-		outer, inners = wayShape[0]
+		outerId, outer, inners = wayShape[0]
 		if len(outer) != 2:
 			print "Way has unexpected length"
 			ok = False			
@@ -336,7 +336,7 @@ if __name__ == "__main__":
 	testWayData = area["ways"][testWayUuid]
 	wayShape, wayTags = testWayData
 	wayPoly = wayShape[0]
-	outer, inners = wayPoly
+	outerId, outer, inners = wayPoly
 	wayPoly = outer[::-1]
 	idChanges = ziggDb.SetArea(area, userInfo)
 	zigg.ApplyIdChanges(area, idChanges)
@@ -425,7 +425,7 @@ if __name__ == "__main__":
 	wayToMod = area["ways"][newWayId]
 	objShapes, objTags = wayToMod
 	objShape = objShapes[0]
-	outer, inners = objShape
+	outerId, outer, inners = objShape
 
 	area["ways"][newWayId] = [[[None, [[pt2[0], pt2[1], outer[0][2]], [pt3[0], pt3[1], outer[1][2]]], None]], 
 		{'name': 'spanning road'}]
@@ -469,7 +469,7 @@ if __name__ == "__main__":
 	wayObj = waysPartlyInside[wayToModify]
 	wayShape, wayTags = wayObj
 	wayPoly = wayShape[0]
-	outer, inners = wayPoly
+	outerId, outer, inners = wayPoly
 	nodeIndex = None
 	for nodeIndex, pt in enumerate(outer):
 		if zigg.CheckPointInRect(pt, bbox): continue
@@ -482,7 +482,7 @@ if __name__ == "__main__":
 	wayObj = area["ways"][wayToModify]
 	wayShape, wayTags = wayObj
 	wayPoly = wayShape[0]
-	outer, inners = wayPoly
+	outerId, outer, inners = wayPoly
 	if outer[nodeIndex][0] > 55. or outer[nodeIndex][0] < -5.:
 		print "Node in way updated even though it is outside active area"
 		testFail += 1
@@ -497,14 +497,14 @@ if __name__ == "__main__":
 	wayShape, wayTags = testWayData
 	wayPoly = wayShape[0]
 
-	outer, inners = wayPoly
+	outerId, outer, inners = wayPoly
 
 	insidePts = []
 	for pt in outer:
 		inside = zigg.CheckPointInRect(pt, bbox)
 		if not inside: continue
 		insidePts.append(pt)
-	wayPoly[0] = insidePts
+	wayPoly[1] = insidePts
 
 	ex = False
 	try:
@@ -562,7 +562,7 @@ if __name__ == "__main__":
 	wayData = area2["ways"][wayId]
 	wayShape, wayTags = wayData
 	wayPoly = wayShape[0]
-	outer, inners = wayPoly
+	outerId, outer, inners = wayPoly
 	if outer[0] != outer[1]:
 		testFail += 1
 		print "Points with IDs should have the same position"
