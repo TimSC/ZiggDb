@@ -568,7 +568,7 @@ if __name__ == "__main__":
 		print "Points with IDs should have the same position"
 	else:
 		testPass += 1
-	exit(0)
+
 	#==Area operations==
 	#Basic concept: The shapes of areas outside the active area is constant.
 	#Rationale: Shape many be moved into a different data tile; that would be complicated
@@ -576,7 +576,7 @@ if __name__ == "__main__":
 	#Create an area in active area
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 	userInfo = {}
-	newArea = [[[None, [[51.128, -0.271, -1], [51.127, -0.269, -2], [51.1275, -0.272, -3]], []]], {'name': 'lake'}]
+	newArea = [[[-4, [[51.128, -0.271, -1], [51.127, -0.269, -2], [51.1275, -0.272, -3]], []]], {'name': 'lake'}]
 	area["areas"][-1] = newArea
 	idChanges = ziggDb.SetArea(area, userInfo)
 	zigg.ApplyIdChanges(area, idChanges)
@@ -598,7 +598,7 @@ if __name__ == "__main__":
 	area = area2
 
 	#Modify tag for an area in active area
-	newArea = [[[None, [[51.128, -0.271, -1], [51.127, -0.269, -2], [51.1275, -0.272, -3]], []]], {'name': 'wood'}]
+	newArea = [[[-4, [[51.128, -0.271, -1], [51.127, -0.269, -2], [51.1275, -0.272, -3]], []]], {'name': 'wood'}]
 	area["areas"][areaId] = newArea
 	idChanges = ziggDb.SetArea(area, userInfo)
 
@@ -629,7 +629,7 @@ if __name__ == "__main__":
 	a, b = 51.0767134647, 1.186346014
 	clat, clon = 51.15, -0.25
 
-	newArea = [[[[[51.0768857186-a+clat, 1.1862078673-b+clon, -1], 
+	newArea = [[[-8, [[51.0768857186-a+clat, 1.1862078673-b+clon, -1], 
 		[51.0766380201-a+clat, 1.1861000067-b+clon, -2], 
 		[51.0765281911-a+clat, 1.1865016947-b+clon, -3], 
 		[51.0767548592-a+clat, 1.1865872393-b+clon, -4]], 
@@ -643,6 +643,7 @@ if __name__ == "__main__":
 	
 	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 	areaData = area2["areas"][areaId]
+	print areaData
 	diffs = zigg.CompareAreas(area, area2)
 	ok = True
 	if len(diffs) > 0:
@@ -659,7 +660,7 @@ if __name__ == "__main__":
 	#Attempt to upload data based on out of date
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 	userInfo = {}
-	newNode = [[[[[51.129, -0.272, -1]], None]], {'name': 'another place'}]
+	newNode = [[[None, [[51.129, -0.272, -1]], None]], {'name': 'another place'}]
 	area["nodes"][-1] = newNode
 	#print area["nodes"]
 	idChanges = ziggDb.SetArea(area, userInfo)

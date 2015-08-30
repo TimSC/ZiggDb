@@ -644,6 +644,7 @@ class ZiggDb(object):
 		dataToAdd = {}
 		typeChanges = changes[objType+"s"]
 		nodeChanges = changes["nodes"]
+		wayChanges = changes["ways"]
 
 		for ndId in objDict:
 			if not isinstance(ndId, int):
@@ -666,6 +667,10 @@ class ZiggDb(object):
 			shapes, tags = objData
 			for shape in shapes:
 				outerId, outer, inners = shape
+
+				if isinstance(outerId, int):
+					shape[0] = self._GetUuidFromNegId(outerId, wayChanges)
+
 				for pt in outer:
 					ptId = pt[2]
 					if not isinstance(ptId, int):
