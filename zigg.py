@@ -205,7 +205,7 @@ def Trim(objsDict, bbox, invert = False):
 			out[objId] = objData
 	return out
 
-def CompareAreaObjs(area1Objs, area2Objs, ty):
+def CompareAreaObjs(area1Objs, area2Objs, ty, idsMustMatch = False):
 	diff = []
 	for objId in area1Objs:
 		if objId not in area2Objs:
@@ -222,11 +222,21 @@ def CompareAreaObjs(area1Objs, area2Objs, ty):
 		shapes1, tags1 = obj1
 		shapes2, tags2 = obj2
 
-		if tags1 != tags2:
-			diff.append("{0} tag differences".format(ty))
-		if shapes1 != shapes2:
-			diff.append("{0} shape/location/member id differences".format(ty))
-		#print tags1, tags2
+		if len(shapes1) != len(shapes2):
+			diff.append("{0} number of shapes difference".format(ty))
+		for shape1, shape2 in zip(shapes1, shapes2):
+			outerId1, outer1, inners1 = shape1
+			outerId2, outer2, inners2 = shape2
+
+			if tags1 != tags2:
+				diff.append("{0} tag differences".format(ty))
+			if outer1 != outer1:
+				diff.append("{0} outer shape difference".format(ty))
+			if inners1 != inners1:
+				diff.append("{0} outer shape difference".format(ty))
+			if idsMustMatch and outerId1 != outerId2:
+				diff.append("{0} outer shape difference".format(ty))
+			#print tags1, tags2
 
 	return diff
 
