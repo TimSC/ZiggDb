@@ -71,7 +71,8 @@ def FindPartlyOutside(objsDict, bbox, verbose = 0):
 
 			if not (foundOutside and foundInside) and inners is not None:
 				for inner in inners:
-					for pt in inner:
+					innerId, innerShape = inner
+					for pt in innerShape:
 						if not CheckPointInRect(pt, bbox):
 							foundOutside = True
 						else:
@@ -104,7 +105,8 @@ def FindInsideOrPartlyInside(objsDict, bbox, verbose = 0):
 
 			if not foundInside and inners is not None:
 				for inner in inners:
-					for pt in inner:
+					innerId, innerShape = inner
+					for pt in innerShape:
 						if not CheckPointInRect(pt, bbox):
 							pass
 						else:
@@ -278,7 +280,8 @@ def ApplyIdChanges(area, idChanges):
 
 				if inners is None: continue
 				for inner in inners:
-					for pt in inner:
+					innerId, innerShape = inner
+					for pt in innerShape:
 						ptId = pt[2]
 						if not isinstance(ptId, int):
 							continue
@@ -297,7 +300,8 @@ def ObjectExpectedInTiles(objData, zo):
 
 		if inners is not None:
 			for inner in inners:
-				for pt in inner:
+				innerId, innerShape = inner
+				for pt in innerShape:
 					x, y = slippy.deg2num(pt[0], pt[1], zo)
 					tileXYSet.add((int(x), int(y)))
 	return tileXYSet	
@@ -690,7 +694,8 @@ class ZiggDb(object):
 
 				if inners is None: continue
 				for inner in inners:
-					for pt in inner:
+					innerId, innerShape = inner
+					for pt in innerShape:
 						ptId = pt[2]
 						if not isinstance(ptId, int):
 							continue
@@ -736,7 +741,8 @@ class ZiggDb(object):
 
 				if inners is None: continue
 				for inner in inners:
-					for pt in inner:
+					innerId, innerShape = inner
+					for pt in innerShape:
 						ptId = pt[2]
 						if isinstance(ptId, int):
 							continue
@@ -814,12 +820,13 @@ class ZiggDb(object):
 					innerOut = []
 					for innerPoly in inner:
 						outInnerPoly = []
-						for pt in innerPoly:
+						innerPolyId, innerPolyShape = innerPoly
+						for pt in innerPolyShape:
 							if len(pt) != 3:
 								raise ValueError("Points should have 3 values")
 							outInnerPoly.append([self._ValidateLat(pt[0]), self._ValidateLon(pt[1]), 
 								self._ValidateUuid(pt[2])])
-						innerOut.append(outInnerPoly)
+						innerOut.append([innerPolyId, outInnerPoly])
 				
 				outShapeData.append([outerId, outerOut, innerOut])
 				try:
@@ -936,7 +943,8 @@ class ZiggDb(object):
 
 					if inners is None: continue
 					for inner in inners:
-						for pt in inner:
+						innerId, innerShape = inner
+						for pt in innerShape:
 							if not CheckPointInRect(pt, bbox):
 								if pt[2] not in nodePosOutsideDict:
 									nodePosOutsideDict[pt[2]] = pt
@@ -959,7 +967,8 @@ class ZiggDb(object):
 
 					if inners is None: continue
 					for inner in inners:
-						for pt in inner:
+						innerId, innerShape = inner
+						for pt in innerShape:
 							if CheckPointInRect(pt, bbox):
 								if pt[2] not in nodePosInsideDict:
 									nodePosInsideDict[pt[2]] = pt
@@ -982,11 +991,12 @@ class ZiggDb(object):
 							outer[i] = nodePosInsideDict[pt[2]]
 					if inners is not None:
 						for inner in inners:
-							for i, pt in enumerate(inner):
+							innerId, innerShape = inner
+							for i, pt in enumerate(innerShape):
 								if pt[2] in nodePosOutsideDict:
-									inner[i] = nodePosOutsideDict[pt[2]]
+									innerShape[i] = nodePosOutsideDict[pt[2]]
 								if pt[2] in nodePosInsideDict:
-									inner[i] = nodePosInsideDict[pt[2]]
+									innerShape[i] = nodePosInsideDict[pt[2]]
 
 		#==All objects that are outside active area must exist in the input==
 		partlyOutsideWays = FindPartlyOutside(currentArea["ways"], bbox)
@@ -1029,7 +1039,8 @@ class ZiggDb(object):
 
 					if inners is None: continue
 					for inner in inners:
-						for pt in inner:
+						innerId, innerShape = inner
+						for pt in innerShape:
 							ptId = pt[2]
 							if not isinstance(ptId, int): continue
 							if not CheckPointInRect(pt, bbox): 
@@ -1072,14 +1083,17 @@ class ZiggDb(object):
 
 					if inners is None: continue
 					for inner, newInner in zip(inners, newInners):
+						innerId, innerShape = inner
+						newInnerId, newInnerShape = newInner
+
 						#Check the nodes we expect in inner way
 						innerIds = set()
-						for pt in inner:
+						for pt in innerShape:
 							if not CheckPointInRect(pt, bbox): continue
 							innerIds.add(pt[2])
 
 						#Check expected nodes exist in new data
-						newIds = set([pt[2] for pt in newInner])
+						newIds = set([pt[2] for pt in newInnerShape])
 						for nid in innerIds:
 							if nid not in newIds:
 								raise ValueError("Cannot add nodes outside active area")

@@ -633,9 +633,9 @@ if __name__ == "__main__":
 		[51.0766380201-a+clat, 1.1861000067-b+clon, -2], 
 		[51.0765281911-a+clat, 1.1865016947-b+clon, -3], 
 		[51.0767548592-a+clat, 1.1865872393-b+clon, -4]], 
-		[[[51.0767852373-a+clat, 1.1862859733-b+clon, -5], 
+		[[-9, [[51.0767852373-a+clat, 1.1862859733-b+clon, -5], 
 		[51.0767385017-a+clat, 1.1864421853-b+clon, -6], 
-		[51.0766637247-a+clat, 1.1862971313-b+clon, -7]]]]], {'name': 'doughnut'}]
+		[51.0766637247-a+clat, 1.1862971313-b+clon, -7]]]]]], {'name': 'doughnut'}]
 	area["areas"][-1] = newArea
 	idChanges = ziggDb.SetArea(area, userInfo)
 	zigg.ApplyIdChanges(area, idChanges)
@@ -643,8 +643,14 @@ if __name__ == "__main__":
 	
 	area2 = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
 	areaData = area2["areas"][areaId]
-	print areaData[0]
-
+	outerId = areaData[0][0][0]
+	if isinstance(outerId, int):
+		print "Data read back should not have integer id for outer way"
+		testFail += 1
+	else:
+		testPass += 1
+	innerId = areaData[0][0][1]
+	
 	diffs = zigg.CompareAreas(area, area2)
 	ok = True
 	if len(diffs) > 0:
