@@ -130,6 +130,21 @@ if __name__ == "__main__":
 	else:
 		testPass += 1
 
+	#Upload node with an internal way ID (not allowed)
+	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
+	area["nodes"][-1] = [[[-2, [[51.129, -0.272, -1]], None]], {'name': 'test tag'}]
+
+	ex = False
+	try:
+		idChanges = ziggDb.SetArea(area, userInfo)
+	except Exception as err:
+		ex = True
+	if not ex:
+		print "Unexpected lack of exception when moving node outside active area"
+		testFail += 1
+	else:
+		testPass += 1
+
 	#Delete point outside active area (not allowed)
 	#In fact there should never been single nodes outside the active area
 
@@ -597,7 +612,7 @@ if __name__ == "__main__":
 		testFail += 1
 	area = area2
 
-	#Modify tag for an area in active area
+	#Modify tag for an area in active area (allowed) 
 	newArea = [[[-4, [[51.128, -0.271, -1], [51.127, -0.269, -2], [51.1275, -0.272, -3]], []]], {'name': 'wood'}]
 	area["areas"][areaId] = newArea
 	idChanges = ziggDb.SetArea(area, userInfo)
@@ -610,6 +625,23 @@ if __name__ == "__main__":
 		testFail += 1
 	else:
 		testPass += 1
+	area = area2
+
+	#Reference a non-existent internal way ID (not allowed)
+	newArea = [[[uuid.uuid4().bytes, [[51.128, -0.271, -1], [51.127, -0.269, -2], [51.1275, -0.272, -3]], []]], {'name': 'wood'}]
+	area["areas"][areaId] = newArea
+	ex = False
+	try:
+		idChanges = ziggDb.SetArea(area, userInfo)
+	except ValueError:
+		ex = True
+	if not ex:
+		testFail += 1
+		print "Unexpected lack of exception when referencing non existent ID in internal way"
+	else:
+		testPass += 1
+
+	#Have contradictory shapes for internal ways (not allowed)
 
 	#Delete area in active area
 	area = ziggDb.GetArea([-0.3, 51.12, -0.19, 51.17])
@@ -649,8 +681,13 @@ if __name__ == "__main__":
 		testFail += 1
 	else:
 		testPass += 1
-	innerId = areaData[0][0][1]
-	
+	innerId = areaData[0][0][2][0][0]
+	if isinstance(innerId, int):
+		print "Data read back should not have integer id for inner way"
+		testFail += 1
+	else:
+		testPass += 1
+
 	diffs = zigg.CompareAreas(area, area2)
 	ok = True
 	if len(diffs) > 0:
